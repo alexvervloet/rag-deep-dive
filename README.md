@@ -7,7 +7,7 @@ retrieval, hybrid search, reranking, grounding with citations, and evaluation �
 by building each one from scratch. No LangChain, no LlamaIndex, no vector
 database: just enough code to *see* how it works.
 
-This is the fourth of eight repos in a series. The sibling repos
+This is the fourth of eight core repos in the series. The sibling repos
 ([openai-api-deep-dive](https://github.com/Ailuue/openai-api-deep-dive),
 [claude-api-deep-dive](https://github.com/Ailuue/claude-api-deep-dive)) teach the underlying API calls —
 embeddings and chat. This one assumes you can make those calls and asks the next
@@ -226,6 +226,48 @@ separates a RAG demo from a RAG system.**
 
 ---
 
+## Going further — four more retrieval techniques
+
+Once the core pipeline works and you can *measure* it (§9), these are the highest-
+leverage upgrades. Each is a small, self-contained example you can run and score.
+
+### Query transformation — HyDE & multi-query
+A question and its answer often don't "look alike" in embedding space. Transform the
+query first: draft a *hypothetical answer* and embed that (**HyDE**), or fan the
+question out into several paraphrases and union the results (**multi-query**). One
+extra LLM call before retrieval, and oblique questions start finding the right chunk.
+```bash
+python examples/09_query_transformation.py
+```
+
+### Contextual retrieval
+A chunk embedded in isolation loses the words that make it findable ("the limit is
+5 GB" — of *what*?). Prepend a one-sentence, LLM-written context that situates the
+chunk in its document *before embedding* — while still showing the model the clean
+chunk. A cheap, high-leverage win for short, under-specified passages.
+```bash
+python examples/10_contextual_retrieval.py
+```
+
+### Metadata filtering & parent-document retrieval
+Retrieval quality isn't only embeddings. **Metadata filtering** constrains *where*
+you search (category, date, access-level) — relevance and security in one move.
+**Parent-document (small-to-big)** embeds small chunks for a precise match but
+returns the larger parent for complete context — resolving the chunk-size tension.
+```bash
+python examples/11_metadata_and_parent.py
+```
+
+### Document ingestion — from messy sources to clean chunks
+Real corpora are PDFs and HTML, not tidy Markdown. Respect the document's structure
+(split on headings → sections → metadata), parse each format down to clean text, and
+tidy whitespace. Ingestion is where retrieval quality is won or lost.
+```bash
+python examples/12_document_ingestion.py
+```
+
+---
+
 ## 10. The capstone: `ask_docs.py`
 
 Everything comes together in a real "chat with your docs" tool. Point it at the
@@ -357,6 +399,10 @@ examples/
   06_hybrid_retrieval.py    ← keyword + semantic, combined
   07_reranking.py           ← over-retrieve, then reorder
   08_evaluation.py          ← hit rate, MRR, and answer correctness
+  09_query_transformation.py ← HyDE & multi-query: transform the query first
+  10_contextual_retrieval.py ← prepend a context sentence before embedding
+  11_metadata_and_parent.py ← metadata filtering + small-to-big retrieval
+  12_document_ingestion.py  ← structure-aware chunking; HTML/PDF parsing (partly offline)
 ```
 
 ---
@@ -381,7 +427,7 @@ at the top, and run it directly.
 
 ## The series
 
-This is one of eight standalone, hands-on deep dives into building with LLM APIs.
+This is one of thirteen standalone, hands-on deep dives into building with LLM APIs — eight core, plus five bonus dives.
 Each one stands on its own — its own setup, examples, and capstone — and they all
 share the same house style: provider-agnostic, built from scratch (no
 frameworks), offline-first examples, and a real capstone. Do them in any order;
@@ -395,5 +441,13 @@ this sequence builds naturally:
 6. [Agents](https://github.com/Ailuue/agents-deep-dive) — give a model tools and a loop so it can act
 7. [Prompt Injection & Guardrails](https://github.com/Ailuue/prompt-injection-deep-dive) — attack and defend all of the above
 8. [Production](https://github.com/Ailuue/ai-in-production-deep-dive) — operate one app end to end: observability, cost, reliability, caching, guardrails, prompt versioning, eval gates
+
+**Bonus dives** — standalone, slotting in where they're most useful:
+
+- [Context Engineering](https://github.com/Ailuue/context-engineering-deep-dive) — manage what's in the window: memory, compaction, assembly
+- [Multimodal](https://github.com/Ailuue/multimodal-deep-dive) — images & audio, not just text
+- [Fine-tuning](https://github.com/Ailuue/fine-tuning-deep-dive) — teach a model new behavior by example
+- [MCP](https://github.com/Ailuue/mcp-deep-dive) — serve tools, data & prompts to any LLM over a standard protocol
+- [Local Models](https://github.com/Ailuue/local-models-deep-dive) — run open-weight models on your own machine
 
 **You are here: #4 — RAG.**
