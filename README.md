@@ -104,9 +104,11 @@ Two knobs, both tradeoffs:
   boundary isn't lost to both neighbours.
 
 There's no universally correct setting — it depends on your documents and
-questions, which is why Section 6 has you *measure* it. See
-[rag/chunking.py](rag/chunking.py) for `chunk_text()` (sliding window) and
-`chunk_paragraphs()` (split on structure).
+questions, which is why Section 6 has you *measure* it. *How* you cut matters too,
+not just how big: see [rag/chunking.py](rag/chunking.py) for `chunk_text()`
+(sliding window), `chunk_paragraphs()` (split on blank lines), and
+`chunk_markdown_sections()` (split on headings) — compared head-to-head in the
+"Chunking strategies" example under [Going further](#going-further--five-more-retrieval-upgrades).
 
 ---
 
@@ -167,20 +169,40 @@ python examples/05_chunk_size.py
 
 Small chunks pinpoint the exact sentence but can fragment an answer; large chunks
 carry more context per hit but less precisely. The lesson isn't "small good" — it's
-that this is an empirical knob you tune by looking at results (and, in Section 9,
+that this is an empirical knob you tune by looking at results (and, in Section 10,
 at numbers).
 
 ---
 
-## 7. Tuning retrieval II — hybrid search
+## 7. Keyword search — the other half of retrieval
 
-Pure vector search is great at *meaning* but can fumble exact strings — product
-names, error codes, IDs — that carry little semantic signal. Old-fashioned
-**keyword** search is the opposite. **Hybrid retrieval** runs both and blends the
-scores, getting each one's strength.
+The vector store (Section 4) matches on *meaning*. Its opposite number is
+**keyword** (lexical) search, which matches on the actual *words* — exactly what
+embeddings are worst at: product names, error codes, IDs. We build it from scratch
+with **BM25**, the classic search-engine ranking function, which weighs each query
+word by how *rare* it is (a shared "the" is worthless; a shared "NN-413" is
+decisive) and normalizes for chunk length. No model, no embeddings — pure
+arithmetic over word counts, so it's **free and offline**.
 
 ```bash
-python examples/06_hybrid_retrieval.py
+python examples/06_keyword_search.py   # offline — no key, no cost
+```
+
+The example runs an exact-code query (keyword nails it) against a paraphrase query
+(keyword whiffs — the answer uses different words than the question). That second
+failure is the mirror image of vector search's, and the whole reason the next
+section blends the two. See [rag/keyword.py](rag/keyword.py) for the BM25 code.
+
+---
+
+## 8. Tuning retrieval II — hybrid search
+
+You've now built both halves of retrieval: vector search by *meaning* (Section 4)
+and keyword search by *words* (Section 7). Each has a blind spot the other covers.
+**Hybrid retrieval** runs both and blends the scores, getting each one's strength.
+
+```bash
+python examples/07_hybrid_retrieval.py
 ```
 
 The example contrasts a paraphrase query (vectors win) with an exact-code query
@@ -189,14 +211,14 @@ retrieval is hybrid.
 
 ---
 
-## 8. Tuning retrieval III — reranking
+## 9. Tuning retrieval III — reranking
 
 Vector search is cheap but approximate; the best chunk isn't always #1. A two-stage
 pipeline fixes this: **retrieve** a generous handful cheaply, then **rerank** those
 few with a slower, smarter scorer and keep the best.
 
 ```bash
-python examples/07_reranking.py
+python examples/08_reranking.py
 ```
 
 Production systems use a dedicated **cross-encoder reranker** (Voyage and Cohere
@@ -206,13 +228,13 @@ you see the shape without a new dependency.
 
 ---
 
-## 9. Evaluation — is it actually working?
+## 10. Evaluation — is it actually working?
 
 Every knob above is a guess until you measure. RAG fails in two independent places,
 so you evaluate both:
 
 ```bash
-python examples/08_evaluation.py
+python examples/09_evaluation.py
 ```
 
 - **Retrieval** — did the right chunk come back? `hit rate @ k` (was it in the top
@@ -226,9 +248,9 @@ separates a RAG demo from a RAG system.**
 
 ---
 
-## Going further — four more retrieval techniques
+## Going further — five more retrieval upgrades
 
-Once the core pipeline works and you can *measure* it (§9), these are the highest-
+Once the core pipeline works and you can *measure* it (§10), these are the highest-
 leverage upgrades. Each is a small, self-contained example you can run and score.
 
 ### Query transformation — HyDE & multi-query
@@ -237,7 +259,7 @@ query first: draft a *hypothetical answer* and embed that (**HyDE**), or fan the
 question out into several paraphrases and union the results (**multi-query**). One
 extra LLM call before retrieval, and oblique questions start finding the right chunk.
 ```bash
-python examples/09_query_transformation.py
+python examples/10_query_transformation.py
 ```
 
 ### Contextual retrieval
@@ -246,7 +268,7 @@ A chunk embedded in isolation loses the words that make it findable ("the limit 
 chunk in its document *before embedding* — while still showing the model the clean
 chunk. A cheap, high-leverage win for short, under-specified passages.
 ```bash
-python examples/10_contextual_retrieval.py
+python examples/11_contextual_retrieval.py
 ```
 
 ### Metadata filtering & parent-document retrieval
@@ -255,20 +277,30 @@ you search (category, date, access-level) — relevance and security in one move
 **Parent-document (small-to-big)** embeds small chunks for a precise match but
 returns the larger parent for complete context — resolving the chunk-size tension.
 ```bash
-python examples/11_metadata_and_parent.py
+python examples/12_metadata_and_parent.py
+```
+
+### Chunking strategies — fixed-size vs structure-aware
+A fixed-size word window cuts wherever the count runs out — sometimes mid-topic,
+gluing the tail of one section onto the head of the next (exactly the merged chunk
+that tripped up §8's hybrid search). Splitting on the document's own headings instead
+gives one topic per chunk and a heading you can cite. The honest limit: it fixes
+*structure*, not the *vocabulary* gap that query transformation handles.
+```bash
+python examples/13_chunking_strategies.py
 ```
 
 ### Document ingestion — from messy sources to clean chunks
-Real corpora are PDFs and HTML, not tidy Markdown. Respect the document's structure
-(split on headings → sections → metadata), parse each format down to clean text, and
+Real corpora are PDFs and HTML, not tidy Markdown. Parse each format down to clean
+text, apply the heading-aware split from the previous section, attach metadata, and
 tidy whitespace. Ingestion is where retrieval quality is won or lost.
 ```bash
-python examples/12_document_ingestion.py
+python examples/14_document_ingestion.py
 ```
 
 ---
 
-## 10. The capstone: `ask_docs.py`
+## 11. The capstone: `ask_docs.py`
 
 Everything comes together in a real "chat with your docs" tool. Point it at the
 [corpus/](corpus/) folder and ask; it indexes once (caching the embeddings to
@@ -323,7 +355,7 @@ prompting, better context, and RAG before you reach for it. And **don't decide b
 vibes** — the only way to know whether fine-tuning beat your RAG baseline (or made
 things worse) is to measure both on the same gold set. That's exactly what the
 [evals repo](https://github.com/Ailuue/evals-deep-dive) is for; the evaluation in
-Section 9 is the same method, pointed at a different decision.
+Section 10 is the same method, pointed at a different decision.
 
 ---
 
@@ -338,7 +370,7 @@ You've built a complete small RAG system. The road to production is mostly about
 - **Smarter chunking** — token-based sizing, structure-aware splitting, and
   attaching metadata (titles, dates, sections) for filtering.
 - **Dedicated rerankers** — cross-encoder rerank endpoints (Voyage, Cohere) in
-  place of the LLM reranker pattern in Section 8.
+  place of the LLM reranker pattern in Section 9.
 - **Query transformation** — rewriting or expanding the user's question, or
   generating multiple sub-queries, before retrieval.
 - **Serious evaluation** — bigger labelled sets, LLM-as-judge for faithfulness,
@@ -385,8 +417,10 @@ rag/                        ← the from-scratch library (read it!)
   providers.py              ← the ONLY provider-specific file: embed() + generate()
   chunking.py               ← split documents into chunks
   store.py                  ← in-memory vector store + cosine search
+  keyword.py                ← keyword search (BM25), the lexical counterpart
   loader.py                 ← read a folder of docs into (name, text)
   pipeline.py               ← index -> retrieve -> answer (grounding + citations)
+  preview.py                ← display helper: print retrieved chunks centered on the match
 corpus/                     ← a small fictional document set to retrieve over
 hands_on/
   ask_docs.py               ← capstone: chat with your docs, with citations
@@ -396,13 +430,15 @@ examples/
   03_vector_store.py        ← build a store, retrieve top-k
   04_rag_pipeline.py        ← the full loop: retrieve -> ground -> answer
   05_chunk_size.py          ← how chunk size changes what you retrieve
-  06_hybrid_retrieval.py    ← keyword + semantic, combined
-  07_reranking.py           ← over-retrieve, then reorder
-  08_evaluation.py          ← hit rate, MRR, and answer correctness
-  09_query_transformation.py ← HyDE & multi-query: transform the query first
-  10_contextual_retrieval.py ← prepend a context sentence before embedding
-  11_metadata_and_parent.py ← metadata filtering + small-to-big retrieval
-  12_document_ingestion.py  ← structure-aware chunking; HTML/PDF parsing (partly offline)
+  06_keyword_search.py      ← keyword search from scratch, BM25 (offline, no key)
+  07_hybrid_retrieval.py    ← keyword + semantic, combined
+  08_reranking.py           ← over-retrieve, then reorder
+  09_evaluation.py          ← hit rate, MRR, and answer correctness
+  10_query_transformation.py ← HyDE & multi-query: transform the query first
+  11_contextual_retrieval.py ← prepend a context sentence before embedding
+  12_metadata_and_parent.py ← metadata filtering + small-to-big retrieval
+  13_chunking_strategies.py ← fixed-size vs heading-aware chunking (partly offline)
+  14_document_ingestion.py  ← HTML/PDF parsing into clean, structured chunks (partly offline)
 ```
 
 ---
@@ -416,7 +452,7 @@ Run `python check_setup.py` first — it catches most problems. Then, by symptom
 | `PROVIDER=... needs ... in .env` | The active stack is missing a key. Set `PROVIDER` and the matching key(s) in `.env`, or run `check_setup.py`. |
 | `ModuleNotFoundError` (openai / anthropic / voyageai / rich) | Dependencies aren't installed or the venv isn't active. `source .venv/bin/activate` then `pip install -r requirements.txt`. |
 | `AuthenticationError` / 401 | A key is present but wrong. For `claude`, remember you need **two** keys (Anthropic *and* Voyage). |
-| Answers look wrong or "I don't know" for facts that ARE in the corpus | A retrieval problem, not a model problem. Raise `-k`, try `--rebuild` after editing the corpus, or check Section 9's metrics. |
+| Answers look wrong or "I don't know" for facts that ARE in the corpus | A retrieval problem, not a model problem. Raise `-k`, try `--rebuild` after editing the corpus, or check Section 10's metrics. |
 | Switched provider and results went haywire | Stale index. The capstone auto-rebuilds, but if you cached elsewhere, delete `.rag_index.json` — vectors aren't comparable across embedding models. |
 | `SyntaxError` / odd type errors on startup | You're likely on Python 3.9 or older; this repo needs 3.10+. `check_setup.py` confirms your version. |
 
