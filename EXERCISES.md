@@ -105,14 +105,32 @@ see. When might *large* chunks retrieve worse?
 When a large chunk bundles several topics, an off-topic sentence can pull it up
 (or push the right chunk down) in the ranking, and you spend context-window space
 on irrelevant text. Small chunks are more precise but can fragment an answer. The
-only way to know for your data is to measure (Section 9).
+only way to know for your data is to measure (Section 10).
 </details>
 
 ---
 
-## Section 7 — Hybrid retrieval
+## Section 7 — Keyword search, BM25 **(offline)**
 
-**Predict, then run.** `examples/06_hybrid_retrieval.py` asks "what does error
+**Predict, then run.** `examples/06_keyword_search.py` scores chunks for "what does
+error NN-413 mean?" on words alone — no embeddings. Which of BM25's three
+ingredients (term frequency, IDF, or length normalization) does the most work in
+ranking the right chunk first?
+
+<details><summary>▸ Answer</summary>
+
+IDF. "nn-413" appears in just one chunk, so its inverse-document-frequency weight
+is huge — one match is decisive. Term frequency barely matters (the code occurs
+once) and length only breaks ties. That's BM25's whole edge over counting shared
+words: rare terms are worth far more than common ones. And it's all **offline** —
+keyword search needs no model, no API call, no cost.
+</details>
+
+---
+
+## Section 8 — Hybrid retrieval
+
+**Predict, then run.** `examples/07_hybrid_retrieval.py` asks "what does error
 NN-413 mean?" Which scorer — vector or keyword — do you expect to nail it, and
 why?
 
@@ -126,7 +144,7 @@ why production retrieval is usually hybrid.
 
 ---
 
-## Section 8 — Reranking
+## Section 9 — Reranking
 
 **Recall.** Reranking re-scores only the top ~8 chunks, not the whole corpus. Why
 is it affordable to use a slower, smarter method at that stage?
@@ -140,7 +158,7 @@ That's the point of a two-stage retrieve-then-rerank pipeline.
 
 ---
 
-## Section 9 — Evaluation
+## Section 10 — Evaluation
 
 **Recall.** What's the difference between "hit rate @ k" and "MRR," and why track
 both?
@@ -154,7 +172,7 @@ model better context. Retrieval can also succeed while the *answer* is still
 wrong, which is why the example measures answer correctness too.
 </details>
 
-**Do.** Change `K` in `examples/08_evaluation.py` from 4 to 1, then to 8. What
+**Do.** Change `K` in `examples/09_evaluation.py` from 4 to 1, then to 8. What
 happens to the hit rate, and what's the catch with just cranking k up?
 
 <details><summary>▸ Answer</summary>
@@ -169,7 +187,7 @@ tradeoff you measure, not maximize.
 
 ## Going further — more retrieval techniques
 
-**Recall (query transformation, `09`).** HyDE embeds a *hypothetical answer*
+**Recall (query transformation, `10`).** HyDE embeds a *hypothetical answer*
 instead of the question. Why does that help retrieval?
 
 <details><summary>▸ Answer</summary>
@@ -180,7 +198,7 @@ closer to the real passage — so embedding it pulls the right chunk up the rank
 Multi-query gets there differently: more phrasings = more chances to match.
 </details>
 
-**Predict (contextual retrieval, `10`).** The example embeds `context + chunk` but
+**Predict (contextual retrieval, `11`).** The example embeds `context + chunk` but
 stores only `chunk`. Why embed one thing and show the model another?
 
 <details><summary>▸ Answer</summary>
@@ -191,7 +209,7 @@ the **clean** chunk, not the synthetic context — so you embed the augmented te
 store and display the original.
 </details>
 
-**Recall (metadata & parent-doc, `11`).** Name one relevance reason and one security
+**Recall (metadata & parent-doc, `12`).** Name one relevance reason and one security
 reason to filter retrieval by metadata. And what tension does small-to-big resolve?
 
 <details><summary>▸ Answer</summary>
@@ -202,14 +220,29 @@ tension — **small** chunks match precisely, but you return the **parent** so t
 model reads complete context.
 </details>
 
-**Do (ingestion, `12`).** The first two parts run offline. Why does splitting on
-Markdown headings beat a blind word-window — and what becomes useful metadata?
+**Do (chunking strategies, `13`).** The first part runs offline. Why does splitting on
+Markdown headings beat a blind word-window — and what's the one thing it *doesn't* fix?
 
 <details><summary>▸ Answer</summary>
 
 Heading-split sections are each about **one topic**, so a chunk doesn't straddle two
-ideas the way a fixed window can. The **heading** itself becomes metadata you can
-filter on and cite ("Billing > Refunds") — structure you'd otherwise throw away.
+ideas the way a fixed window can (that merged "Import/Export" chunk that tripped up
+hybrid search in Section 8). The **heading** also becomes metadata you can filter on
+and cite ("Billing > Refunds"). What it *doesn't* fix: a **vocabulary** gap — if the
+query says "get my notes out" and the doc says "export," better chunking can't connect
+them. That's query transformation's job (`10`).
+</details>
+
+**Predict (ingestion, `14`).** Real corpora are PDFs and HTML, not tidy Markdown. What
+single shape does every parser reduce a document to, so the rest of the pipeline never
+has to care about the original format?
+
+<details><summary>▸ Answer</summary>
+
+`(source, text)` — clean text plus where it came from. HTML through an stdlib parser,
+PDFs through pdfplumber/pypdf, Word through python-docx: each just produces text, which
+then flows through the *same* heading-split → embed → retrieve path as everything else.
+Ingestion is format-in, `(source, text)`-out.
 </details>
 
 ---
