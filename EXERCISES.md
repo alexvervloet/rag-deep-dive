@@ -245,6 +245,31 @@ then flows through the *same* heading-split → embed → retrieve path as every
 Ingestion is format-in, `(source, text)`-out.
 </details>
 
+**Predict (approximate index, `15`).** The IVF index scans only the clusters nearest
+the query. Set `n_probe=1` (one cluster) and it scans ~2% of the vectors. Will recall
+be near-perfect, near-zero, or somewhere in between — and why?
+
+<details><summary>▸ Answer</summary>
+
+In between (~0.76 on the run). Because the data clusters, most of a query's true
+neighbours live in its single nearest cluster — so one probe already finds the bulk of
+them. But some genuine neighbours sit just over a cluster border, in the *second*
+nearest bucket you didn't scan, so you miss them. That miss rate is recall, and it
+climbs fast as you probe more (~0.97 at ~7% scanned). If the vectors had **no** cluster
+structure (uniform noise), one probe would miss almost everything — ANN only works
+because real embeddings cluster.
+</details>
+
+**Recall.** When should you *not* reach for an approximate index?
+
+<details><summary>▸ Answer</summary>
+
+When brute force is fast enough — which, for the few thousand chunks in a normal
+corpus, it is. ANN adds a recall risk and a dial to tune (against an eval, §10) in
+exchange for speed you may not need. It earns its place at millions of vectors, not
+before. Reach for `store.py` first.
+</details>
+
 ---
 
 ## Capstone — `ask_docs.py`
