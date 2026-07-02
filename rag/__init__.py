@@ -20,6 +20,7 @@ Import the pieces you need, e.g.:
 or reach into a specific module to see how it works.
 """
 
+from .ann import IVFIndex, recall_at_k
 from .chunking import chunk_markdown_sections, chunk_paragraphs, chunk_text
 from .keyword import BM25Index, tokenize
 from .loader import load_corpus
@@ -37,6 +38,8 @@ __all__ = [
     "load_corpus",
     "VectorStore",
     "cosine_similarity",
+    "IVFIndex",
+    "recall_at_k",
     "embed",
     "generate",
     "provider_name",
