@@ -248,7 +248,7 @@ separates a RAG demo from a RAG system.**
 
 ---
 
-## Going further — five more retrieval upgrades
+## Going further — six more retrieval upgrades
 
 Once the core pipeline works and you can *measure* it (§10), these are the highest-
 leverage upgrades. Each is a small, self-contained example you can run and score.
@@ -296,6 +296,20 @@ text, apply the heading-aware split from the previous section, attach metadata, 
 tidy whitespace. Ingestion is where retrieval quality is won or lost.
 ```bash
 python examples/14_document_ingestion.py
+```
+
+### Approximate nearest-neighbour — recall for speed
+Our store (§4) does exact brute force — perfect for thousands of chunks, too slow at
+millions. Production then switches to an **approximate** index (FAISS, hnswlib,
+pgvector's IVFFlat/HNSW): bucket the vectors and only scan the buckets nearest the
+query, skipping most of the data. You trade a little **recall** for a large speedup.
+The example builds a tiny IVF index by hand ([rag/ann.py](rag/ann.py)) over synthetic
+clustered vectors and turns the "how many buckets to probe" dial — scanning ~7% of
+the data recovers ~97% of the exact top-10. Offline, no key. The honest caveat:
+don't reach for ANN until brute force is genuinely too slow, and always tune the dial
+against an eval (§10), never on faith.
+```bash
+python examples/15_approximate_index.py       # offline
 ```
 
 ---
@@ -366,7 +380,8 @@ You've built a complete small RAG system. The road to production is mostly about
 
 - **A real vector database** — pgvector, Pinecone, Weaviate, or a local FAISS /
   hnswlib index, for fast approximate search over millions of vectors instead of
-  our brute-force scan.
+  our brute-force scan. §15 builds a toy IVF index by hand so you can see the
+  recall-for-speed dial these tools all expose; a real one is far more optimized.
 - **Smarter chunking** — token-based sizing, structure-aware splitting, and
   attaching metadata (titles, dates, sections) for filtering.
 - **Dedicated rerankers** — cross-encoder rerank endpoints (Voyage, Cohere) in
@@ -417,6 +432,7 @@ rag/                        ← the from-scratch library (read it!)
   providers.py              ← the ONLY provider-specific file: embed() + generate()
   chunking.py               ← split documents into chunks
   store.py                  ← in-memory vector store + cosine search
+  ann.py                    ← a from-scratch approximate (IVF) index: recall-for-speed
   keyword.py                ← keyword search (BM25), the lexical counterpart
   loader.py                 ← read a folder of docs into (name, text)
   pipeline.py               ← index -> retrieve -> answer (grounding + citations)
@@ -439,6 +455,7 @@ examples/
   12_metadata_and_parent.py ← metadata filtering + small-to-big retrieval
   13_chunking_strategies.py ← fixed-size vs heading-aware chunking (partly offline)
   14_document_ingestion.py  ← HTML/PDF parsing into clean, structured chunks (partly offline)
+  15_approximate_index.py   ← approximate (IVF) search: recall-for-speed tradeoff (offline, no key)
 ```
 
 ---
@@ -485,5 +502,7 @@ this sequence builds naturally:
 - [Fine-tuning](https://github.com/Ailuue/fine-tuning-deep-dive) — teach a model new behavior by example
 - [MCP](https://github.com/Ailuue/mcp-deep-dive) — serve tools, data & prompts to any LLM over a standard protocol
 - [Local Models](https://github.com/Ailuue/local-models-deep-dive) — run open-weight models on your own machine
+- [Agent Harnesses](https://github.com/Ailuue/agent-harness-deep-dive) — build on the loop: hooks, permissions, sandboxing, subagents
+- [Realtime Voice](https://github.com/Ailuue/realtime-voice-deep-dive) — low-latency speech-to-speech agents
 
 **You are here: #4 — RAG.**
