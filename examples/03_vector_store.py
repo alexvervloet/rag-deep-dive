@@ -26,7 +26,7 @@ and measures the difference.
 
 Run it:
 
-    python examples/03_vector_store.py
+    secrun python examples/03_vector_store.py
 """
 
 import os
