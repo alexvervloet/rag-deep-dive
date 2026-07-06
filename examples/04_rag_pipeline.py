@@ -17,8 +17,8 @@ and a well-grounded system should say it doesn't know rather than invent.
 
 Run it:
 
-    python examples/04_rag_pipeline.py
-    python examples/04_rag_pipeline.py "Can students get a discount?"
+    secrun python examples/04_rag_pipeline.py
+    secrun python examples/04_rag_pipeline.py "Can students get a discount?"
 """
 
 import os
