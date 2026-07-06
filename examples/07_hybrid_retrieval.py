@@ -27,7 +27,7 @@ The keyword half reuses the BM25 index from example 06 (see
 
 Run it:
 
-    python examples/07_hybrid_retrieval.py
+    secrun python examples/07_hybrid_retrieval.py
 """
 
 import os
