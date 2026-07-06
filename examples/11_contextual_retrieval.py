@@ -28,8 +28,8 @@ one context pass per document and caches it.)
 
 Run it:
 
-    python examples/11_contextual_retrieval.py
-    python examples/11_contextual_retrieval.py "what is the storage cap on the Wren plan?"
+    secrun python examples/11_contextual_retrieval.py
+    secrun python examples/11_contextual_retrieval.py "what is the storage cap on the Wren plan?"
 """
 
 import os
