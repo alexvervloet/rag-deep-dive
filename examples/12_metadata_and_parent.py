@@ -20,7 +20,7 @@ This script demonstrates each over the support corpus.
 
 Run it:
 
-    python examples/12_metadata_and_parent.py
+    secrun python examples/12_metadata_and_parent.py
 """
 
 import os
