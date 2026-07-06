@@ -21,7 +21,7 @@ turns into real numbers.
 
 Run it:
 
-    python examples/05_chunk_size.py
+    secrun python examples/05_chunk_size.py
 """
 
 import os
