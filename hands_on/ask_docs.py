@@ -14,16 +14,16 @@ they say "RAG."
 Examples
 --------
   # Ask the built-in demo question
-  python hands_on/ask_docs.py
+  secrun python hands_on/ask_docs.py
 
   # Ask your own
-  python hands_on/ask_docs.py "Can students get a discount?"
+  secrun python hands_on/ask_docs.py "Can students get a discount?"
 
   # Retrieve more chunks, and show the exact text that was retrieved
-  python hands_on/ask_docs.py "How is my data protected?" -k 6 --show-context
+  secrun python hands_on/ask_docs.py "How is my data protected?" -k 6 --show-context
 
   # Re-embed from scratch (after editing corpus/, or to change chunking)
-  python hands_on/ask_docs.py "What plans are there?" --rebuild --chunk-size 80
+  secrun python hands_on/ask_docs.py "What plans are there?" --rebuild --chunk-size 80
 
 The index is cached in .rag_index.json. It records which provider and chunk
 settings built it, and rebuilds automatically if those change — vectors from one
