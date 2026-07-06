@@ -26,7 +26,7 @@ says "export." No chunking rescues that; that's what query transformation
 
 Run it:
 
-    python examples/13_chunking_strategies.py
+    secrun python examples/13_chunking_strategies.py
 """
 
 import os
