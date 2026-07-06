@@ -16,7 +16,7 @@ share **no words**, because the match is on meaning, not spelling.
 
 Run it:
 
-    python examples/01_embeddings_recap.py
+    secrun python examples/01_embeddings_recap.py
 """
 
 import os
