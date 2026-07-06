@@ -21,7 +21,7 @@ change a knob.
 
 Run it:
 
-    python examples/09_evaluation.py
+    secrun python examples/09_evaluation.py
 """
 
 import os
