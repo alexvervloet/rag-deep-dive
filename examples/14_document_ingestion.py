@@ -26,7 +26,7 @@ needs a provider key like the other examples.
 
 Run it:
 
-    python examples/14_document_ingestion.py
+    secrun python examples/14_document_ingestion.py
 """
 
 import os
