@@ -17,8 +17,8 @@ shape, no new dependency.
 
 Run it:
 
-    python examples/08_reranking.py
-    python examples/08_reranking.py "I lost my phone with the authenticator app"
+    secrun python examples/08_reranking.py
+    secrun python examples/08_reranking.py "I lost my phone with the authenticator app"
 """
 
 import os
