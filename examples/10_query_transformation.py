@@ -35,8 +35,8 @@ seen.
 
 Run it:
 
-    python examples/10_query_transformation.py
-    python examples/10_query_transformation.py "can I get my money back?"
+    secrun python examples/10_query_transformation.py
+    secrun python examples/10_query_transformation.py "can I get my money back?"
 """
 
 import os
