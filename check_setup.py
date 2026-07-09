@@ -2,7 +2,7 @@
 Setup check — run this first.
 =============================
 
-    python check_setup.py
+    secrun python check_setup.py
 
 It answers one question: "Is my environment ready?" It checks your Python
 version, the installed packages, your chosen PROVIDER, and the API key(s) that
@@ -62,7 +62,7 @@ def _get(env, name):
 
 # (import name, pip name, what it's for). Provider SDKs are checked conditionally.
 ALWAYS = [
-    ("dotenv", "python-dotenv", "loads your keys from .env"),
+    ("dotenv", "python-dotenv", "loads PROVIDER/config from .env"),
     ("rich", "rich", "pretty output in the ask_docs.py capstone"),
 ]
 PROVIDER_DEPS = {
@@ -129,8 +129,8 @@ def check_keys(env, provider):
     for name, prefix, placeholder in PROVIDER_KEYS.get(provider, []):
         value = _get(env, name)
         if not value or value == placeholder:
-            fail(f"{name} is not set (still the placeholder).")
-            print("    Open .env and paste your real key.")
+            fail(f"{name} is not set.")
+            print("    Store it in your OS keychain and run `secrun python check_setup.py` — see SECRETS.md.")
             all_ok = False
         elif not value.startswith(prefix):
             warn(f"{name} is set but doesn't start with '{prefix}'. Double-check it.")
@@ -153,7 +153,7 @@ def main():
     print()
     if py and deps and keys:
         print(_c("All set! 🎉", "1;32"))
-        print("Start here:  python examples/01_embeddings_recap.py")
+        print("Start here:  secrun python examples/01_embeddings_recap.py")
         print("(Example 02 is offline and needs no key.)")
         return 0
     print(_c("Not ready yet — fix the ✗ items above, then run this again.", "1;31"))
