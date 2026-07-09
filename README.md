@@ -8,8 +8,8 @@ by building each one from scratch. No LangChain, no LlamaIndex, no vector
 database: just enough code to *see* how it works.
 
 This is the fourth of eight core repos in the series. The sibling repos
-([openai-api-deep-dive](https://github.com/Ailuue/openai-api-deep-dive),
-[claude-api-deep-dive](https://github.com/Ailuue/claude-api-deep-dive)) teach the underlying API calls —
+([openai-api-deep-dive](https://github.com/alexvervloet/openai-api-deep-dive),
+[claude-api-deep-dive](https://github.com/alexvervloet/claude-api-deep-dive)) teach the underlying API calls —
 embeddings and chat. This one assumes you can make those calls and asks the next
 question: **how do you get a model to answer accurately from *your* documents?**
 
@@ -44,13 +44,14 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Choose your provider and add your key(s)
+# 3. Choose your provider (set PROVIDER in .env); your key(s) load separately
 cp .env.example .env
-#    ...then open .env. Set PROVIDER to "openai" or "claude" and paste the
-#    matching key(s). Default is openai (one key, first-party embeddings).
+#    Your API key(s) do NOT go in .env. Store them in your OS keychain and run
+#    lessons with `secrun` — 2-minute setup in ../SECRETS.md. Default is openai
+#    (one key); claude needs ANTHROPIC_API_KEY + VOYAGE_API_KEY.
 
 # 4. Confirm everything is wired up (makes no API call, costs nothing)
-python check_setup.py
+secrun python check_setup.py       # secrun injects your key so the check can see it
 ```
 
 **RAG is provider-agnostic, so this repo is too.** Pick whichever stack you set up
@@ -78,7 +79,7 @@ close two vectors are (1.0 = same meaning, 0 = unrelated). The magic that makes
 retrieval possible: two texts can match strongly even when they share **no words**.
 
 ```bash
-python examples/01_embeddings_recap.py
+secrun python examples/01_embeddings_recap.py
 ```
 
 If that's already familiar, skim it and move on. If not, the embeddings examples
@@ -120,7 +121,7 @@ chunk with its embedding, then for a query, score every chunk by cosine similari
 and return the top-k.
 
 ```bash
-python examples/03_vector_store.py
+secrun python examples/03_vector_store.py
 ```
 
 This is the *retrieval* half of RAG — finding the right text, no model answer yet.
@@ -136,8 +137,8 @@ is the main thing "production RAG" adds — same idea, cleverer data structure.
 Now retrieval meets generation — the actual point of the repo:
 
 ```bash
-python examples/04_rag_pipeline.py
-python examples/04_rag_pipeline.py "Can students get a discount?"
+secrun python examples/04_rag_pipeline.py
+secrun python examples/04_rag_pipeline.py "Can students get a discount?"
 ```
 
 The flow (see [rag/pipeline.py](rag/pipeline.py)):
@@ -164,7 +165,7 @@ changing *retrieval quality*, which is what you actually care about. Same corpus
 same query, indexed small vs large:
 
 ```bash
-python examples/05_chunk_size.py
+secrun python examples/05_chunk_size.py
 ```
 
 Small chunks pinpoint the exact sentence but can fragment an answer; large chunks
@@ -202,7 +203,7 @@ and keyword search by *words* (Section 7). Each has a blind spot the other cover
 **Hybrid retrieval** runs both and blends the scores, getting each one's strength.
 
 ```bash
-python examples/07_hybrid_retrieval.py
+secrun python examples/07_hybrid_retrieval.py
 ```
 
 The example contrasts a paraphrase query (vectors win) with an exact-code query
@@ -218,7 +219,7 @@ pipeline fixes this: **retrieve** a generous handful cheaply, then **rerank** th
 few with a slower, smarter scorer and keep the best.
 
 ```bash
-python examples/08_reranking.py
+secrun python examples/08_reranking.py
 ```
 
 Production systems use a dedicated **cross-encoder reranker** (Voyage and Cohere
@@ -234,7 +235,7 @@ Every knob above is a guess until you measure. RAG fails in two independent plac
 so you evaluate both:
 
 ```bash
-python examples/09_evaluation.py
+secrun python examples/09_evaluation.py
 ```
 
 - **Retrieval** — did the right chunk come back? `hit rate @ k` (was it in the top
@@ -259,7 +260,7 @@ query first: draft a *hypothetical answer* and embed that (**HyDE**), or fan the
 question out into several paraphrases and union the results (**multi-query**). One
 extra LLM call before retrieval, and oblique questions start finding the right chunk.
 ```bash
-python examples/10_query_transformation.py
+secrun python examples/10_query_transformation.py
 ```
 
 ### Contextual retrieval
@@ -268,7 +269,7 @@ A chunk embedded in isolation loses the words that make it findable ("the limit 
 chunk in its document *before embedding* — while still showing the model the clean
 chunk. A cheap, high-leverage win for short, under-specified passages.
 ```bash
-python examples/11_contextual_retrieval.py
+secrun python examples/11_contextual_retrieval.py
 ```
 
 ### Metadata filtering & parent-document retrieval
@@ -277,7 +278,7 @@ you search (category, date, access-level) — relevance and security in one move
 **Parent-document (small-to-big)** embeds small chunks for a precise match but
 returns the larger parent for complete context — resolving the chunk-size tension.
 ```bash
-python examples/12_metadata_and_parent.py
+secrun python examples/12_metadata_and_parent.py
 ```
 
 ### Chunking strategies — fixed-size vs structure-aware
@@ -287,7 +288,7 @@ that tripped up §8's hybrid search). Splitting on the document's own headings i
 gives one topic per chunk and a heading you can cite. The honest limit: it fixes
 *structure*, not the *vocabulary* gap that query transformation handles.
 ```bash
-python examples/13_chunking_strategies.py
+secrun python examples/13_chunking_strategies.py
 ```
 
 ### Document ingestion — from messy sources to clean chunks
@@ -295,7 +296,7 @@ Real corpora are PDFs and HTML, not tidy Markdown. Parse each format down to cle
 text, apply the heading-aware split from the previous section, attach metadata, and
 tidy whitespace. Ingestion is where retrieval quality is won or lost.
 ```bash
-python examples/14_document_ingestion.py
+secrun python examples/14_document_ingestion.py
 ```
 
 ### Approximate nearest-neighbour — recall for speed
@@ -322,16 +323,16 @@ disk), retrieves, and answers with `[n]` citations plus a table of sources.
 
 ```bash
 # Ask the built-in demo question:
-python hands_on/ask_docs.py
+secrun python hands_on/ask_docs.py
 
 # Ask your own:
-python hands_on/ask_docs.py "Can students get a discount?"
+secrun python hands_on/ask_docs.py "Can students get a discount?"
 
 # Retrieve more chunks and show the exact text retrieved:
-python hands_on/ask_docs.py "How is my data protected?" -k 6 --show-context
+secrun python hands_on/ask_docs.py "How is my data protected?" -k 6 --show-context
 
 # Re-embed from scratch with different chunking:
-python hands_on/ask_docs.py "What plans are there?" --rebuild --chunk-size 80
+secrun python hands_on/ask_docs.py "What plans are there?" --rebuild --chunk-size 80
 ```
 
 Read the source in [hands_on/ask_docs.py](hands_on/ask_docs.py): the index is
@@ -356,7 +357,7 @@ behaves by default*. Different problems.
 | Facts that change, are private, or must be **cited** | **RAG** | Retrieve the source at request time; update the corpus, not the model |
 | A consistent **format, tone, or narrow skill** done the same way every time | **Fine-tuning** | You're teaching *behavior*, not facts — that's what training adjusts |
 | The relevant material is small enough to just **include** | **Long context** | If it fits in the prompt, retrieval is machinery you don't need |
-| The model must **act** or fetch live data | **Tools / agents** | The gap is *capability*, not knowledge — see the [agents repo](https://github.com/Ailuue/agents-deep-dive) |
+| The model must **act** or fetch live data | **Tools / agents** | The gap is *capability*, not knowledge — see the [agents repo](https://github.com/alexvervloet/agents-deep-dive) |
 | Lower **latency/cost** on a fixed, high-volume task | **Fine-tune a smaller model** | Distill known-good behavior into a cheaper model |
 
 They're complementary, not either/or: a common production shape is **fine-tune for
@@ -368,7 +369,7 @@ provider-specific option, and it can't add knowledge that changes. Exhaust
 prompting, better context, and RAG before you reach for it. And **don't decide by
 vibes** — the only way to know whether fine-tuning beat your RAG baseline (or made
 things worse) is to measure both on the same gold set. That's exactly what the
-[evals repo](https://github.com/Ailuue/evals-deep-dive) is for; the evaluation in
+[evals repo](https://github.com/alexvervloet/evals-deep-dive) is for; the evaluation in
 Section 10 is the same method, pointed at a different decision.
 
 ---
@@ -416,7 +417,7 @@ orthogonal to retrieval quality, and the same for any LLM app:
 These shortcuts are right for learning and wrong for production. All seven
 concerns — observability, cost, reliability, caching, guardrails, prompt
 versioning, and eval gates — are built from scratch and wired into one running
-app in **[Production](https://github.com/Ailuue/ai-in-production-deep-dive)** (#8 in the
+app in **[Production](https://github.com/alexvervloet/ai-in-production-deep-dive)** (#8 in the
 series). It runs **offline on a mock provider**, so you can see the whole ops
 machinery with no key and no cost.
 
@@ -462,11 +463,11 @@ examples/
 
 ## Troubleshooting
 
-Run `python check_setup.py` first — it catches most problems. Then, by symptom:
+Run `secrun python check_setup.py` first — it catches most problems. Then, by symptom:
 
 | What you see | What it means / the fix |
 |--------------|-------------------------|
-| `PROVIDER=... needs ... in .env` | The active stack is missing a key. Set `PROVIDER` and the matching key(s) in `.env`, or run `check_setup.py`. |
+| `PROVIDER=... needs ... in the environment` | Set `PROVIDER` in `.env`, then load the key(s) from your keychain by running under `secrun` — see [SECRETS.md](../SECRETS.md). |
 | `ModuleNotFoundError` (openai / anthropic / voyageai / rich) | Dependencies aren't installed or the venv isn't active. `source .venv/bin/activate` then `pip install -r requirements.txt`. |
 | `AuthenticationError` / 401 | A key is present but wrong. For `claude`, remember you need **two** keys (Anthropic *and* Voyage). |
 | Answers look wrong or "I don't know" for facts that ARE in the corpus | A retrieval problem, not a model problem. Raise `-k`, try `--rebuild` after editing the corpus, or check Section 10's metrics. |
@@ -480,29 +481,30 @@ at the top, and run it directly.
 
 ## The series
 
-This is one of thirteen standalone, hands-on deep dives into building with LLM APIs — eight core, plus five bonus dives.
+This is one of sixteen standalone, hands-on deep dives into building with LLM APIs — eight core, plus eight bonus dives.
 Each one stands on its own — its own setup, examples, and capstone — and they all
 share the same house style: provider-agnostic, built from scratch (no
 frameworks), offline-first examples, and a real capstone. Do them in any order;
 this sequence builds naturally:
 
-1. [OpenAI API](https://github.com/Ailuue/openai-api-deep-dive) — the API from zero
-2. [Claude API](https://github.com/Ailuue/claude-api-deep-dive) — the same ideas, the Anthropic way
-3. [Prompt Engineering](https://github.com/Ailuue/prompt-engineering-deep-dive) — shape model behavior with better prompts (zero/few-shot, chain-of-thought, roles)
-4. [RAG](https://github.com/Ailuue/rag-deep-dive) — answer questions over your own documents
-5. [Evals](https://github.com/Ailuue/evals-deep-dive) — measure whether a change actually helps
-6. [Agents](https://github.com/Ailuue/agents-deep-dive) — give a model tools and a loop so it can act
-7. [Prompt Injection & Guardrails](https://github.com/Ailuue/prompt-injection-deep-dive) — attack and defend all of the above
-8. [Production](https://github.com/Ailuue/ai-in-production-deep-dive) — operate one app end to end: observability, cost, reliability, caching, guardrails, prompt versioning, eval gates
+1. [OpenAI API](https://github.com/alexvervloet/openai-api-deep-dive) — the API from zero
+2. [Claude API](https://github.com/alexvervloet/claude-api-deep-dive) — the same ideas, the Anthropic way
+3. [Prompt Engineering](https://github.com/alexvervloet/prompt-engineering-deep-dive) — shape model behavior with better prompts (zero/few-shot, chain-of-thought, roles)
+4. [RAG](https://github.com/alexvervloet/rag-deep-dive) — answer questions over your own documents
+5. [Evals](https://github.com/alexvervloet/evals-deep-dive) — measure whether a change actually helps
+6. [Agents](https://github.com/alexvervloet/agents-deep-dive) — give a model tools and a loop so it can act
+7. [Prompt Injection & Guardrails](https://github.com/alexvervloet/prompt-injection-deep-dive) — attack and defend all of the above
+8. [Production](https://github.com/alexvervloet/ai-in-production-deep-dive) — operate one app end to end: observability, cost, reliability, caching, guardrails, prompt versioning, eval gates
 
 **Bonus dives** — standalone, slotting in where they're most useful:
 
-- [Context Engineering](https://github.com/Ailuue/context-engineering-deep-dive) — manage what's in the window: memory, compaction, assembly
-- [Multimodal](https://github.com/Ailuue/multimodal-deep-dive) — images & audio, not just text
-- [Fine-tuning](https://github.com/Ailuue/fine-tuning-deep-dive) — teach a model new behavior by example
-- [MCP](https://github.com/Ailuue/mcp-deep-dive) — serve tools, data & prompts to any LLM over a standard protocol
-- [Local Models](https://github.com/Ailuue/local-models-deep-dive) — run open-weight models on your own machine
-- [Agent Harnesses](https://github.com/Ailuue/agent-harness-deep-dive) — build on the loop: hooks, permissions, sandboxing, subagents
-- [Realtime Voice](https://github.com/Ailuue/realtime-voice-deep-dive) — low-latency speech-to-speech agents
+- [Context Engineering](https://github.com/alexvervloet/context-engineering-deep-dive) — manage what's in the window: memory, compaction, assembly
+- [Multimodal](https://github.com/alexvervloet/multimodal-deep-dive) — images & audio, not just text
+- [Fine-tuning](https://github.com/alexvervloet/fine-tuning-deep-dive) — teach a model new behavior by example
+- [MCP](https://github.com/alexvervloet/mcp-deep-dive) — serve tools, data & prompts to any LLM over a standard protocol
+- [Local Models](https://github.com/alexvervloet/local-models-deep-dive) — run open-weight models on your own machine
+- [Agent Harnesses](https://github.com/alexvervloet/agent-harness-deep-dive) — build on the loop: hooks, permissions, sandboxing, subagents
+- [Realtime Voice](https://github.com/alexvervloet/realtime-voice-deep-dive) — low-latency speech-to-speech agents
+- [Observability](https://github.com/alexvervloet/observability-deep-dive) — watch a running app over time: drift, quality, alerting, the flywheel
 
 **You are here: #4 — RAG.**
