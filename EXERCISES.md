@@ -274,7 +274,7 @@ before. Reach for `store.py` first.
 
 ## Capstone — `ask_docs.py`
 
-**Do.** Run `python hands_on/ask_docs.py` once, then again. The second run is much
+**Do.** Run `secrun python hands_on/ask_docs.py` once, then again. The second run is much
 faster — why? Then add a fact to a file in `corpus/`, run with `--rebuild`, and
 ask about your new fact.
 
