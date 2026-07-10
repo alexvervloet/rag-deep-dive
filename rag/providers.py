@@ -22,6 +22,7 @@ know — just wrapped so the rest of the code can stay provider-agnostic.
 
 import os
 from functools import lru_cache
+from typing import cast
 
 # Default models per stack. These mirror the ones the sibling repos use.
 _OPENAI_EMBED = "text-embedding-3-small"
@@ -122,7 +123,9 @@ def embed(texts: list[str], input_type: str = "document") -> list[list[float]]:
         result = _voyage_client().embed(
             list(texts), model=_VOYAGE_EMBED, input_type=input_type
         )
-        return result.embeddings
+        # Voyage types `.embeddings` as float OR int vectors (int only for quantized
+        # output dtypes); we always request the default float embeddings.
+        return cast(list[list[float]], result.embeddings)
     raise ValueError(f"Unknown PROVIDER={p!r} (expected 'openai' or 'claude').")
 
 
