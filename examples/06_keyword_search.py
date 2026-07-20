@@ -73,10 +73,18 @@ rare, common = "nn-413", "the"
 print(f"IDF({rare!r}) = {index.idf.get(rare, 0.0):.2f}   vs   IDF({common!r}) = {index.idf.get(common, 0.0):.2f}")
 print("(that gap is the whole edge BM25 has over just counting shared words)\n")
 
-# The same rarity spread across the entire vocabulary, low to high:
-ranked_idf = sorted(index.idf.items(), key=lambda kv: kv[1])
+# The same rarity spread across the entire vocabulary. Ties are broken
+# alphabetically so the printed list is the same on every run.
+ranked_idf = sorted(index.idf.items(), key=lambda kv: (kv[1], kv[0]))
 print("Lowest-IDF words (common):  " + ", ".join(repr(w) for w, _ in ranked_idf[:5]))
-print("Highest-IDF words (rare):   " + ", ".join(repr(w) for w, _ in ranked_idf[-5:]))
+
+# At the rare end almost every word ties, because appearing in exactly one chunk
+# is as rare as this corpus gets. Naming five of them would suggest a ranking that
+# isn't there, so say how many tie and point at the one the query above used.
+top_idf = ranked_idf[-1][1]
+tied = [w for w, v in ranked_idf if v == top_idf]
+print(f"Highest-IDF words (rare):   {len(tied)} words tie at {top_idf:.2f}, each in just one chunk")
+print(f"                            (including {rare!r}, which is why one match on it decides the ranking)")
 
 print(
     "\nKeyword search is decisive on the exact code but whiffs on the paraphrase — "
