@@ -1,22 +1,21 @@
 """
-Example 10 — query transformation: HyDE & multi-query.
-======================================================
+Example 10: query transformation: HyDE & multi-query.
 
 Retrieval embeds the user's *question* and looks for nearby chunks. But a question
 and its answer often don't look alike. Ask "someone keeps signing into my stuff"
-and the answer lives under a heading called "Two-factor authentication" — they
+and the answer lives under a heading called "Two-factor authentication", they
 share no words, and sit far apart in embedding space, so direct retrieval buries
 the right chunk beneath vaguely-related ones. When the raw query retrieves poorly,
 you *transform* it first.
 
-Two classic, complementary techniques — both just an extra LLM call before retrieval:
+Two classic, complementary techniques, both just an extra LLM call before retrieval:
 
   - HyDE (Hypothetical Document Embeddings): ask the model to *draft a hypothetical
     answer*, then embed THAT instead of the question. A fake answer lives in
     "answer space," much closer to the real passage than the question is.
 
   - Multi-query: ask the model for several paraphrases of the question, retrieve for
-    each, and union the results. More shots on goal — robust to one bad phrasing.
+    each, and union the results. More shots on goal, and robust to one bad phrasing.
 
 This script compares direct retrieval vs. HyDE vs. multi-query on a deliberately
 oblique question, printing each chunk's `source > heading` so you can watch the
@@ -25,7 +24,7 @@ citable topic.
 
 An honest note on what you'll see: direct retrieval scores the 2FA section low
 (~0.38) and near the bottom of the top-k. The reliable effect of transforming the
-query is a big jump in that *score* — HyDE roughly doubles it — which drags the
+query is a big jump in that *score* (HyDE roughly doubles it), which drags the
 answer from "ignorable" into contention. Exact ranks wobble (the LLM calls are
 non-deterministic, and on this tiny corpus password/recovery chunks are genuinely
 related too), so sometimes the 2FA section climbs a rank, sometimes it just closes
@@ -71,7 +70,7 @@ K = 3
 
 
 def cite(rec) -> str:
-    """`source > heading` — the clean citation heading-aware chunking buys us."""
+    """`source > heading`: the clean citation heading-aware chunking buys us."""
     return f"{rec.metadata['source']} > {rec.metadata.get('heading', '?')}"
 
 
@@ -80,7 +79,7 @@ def show(label: str, hits):
     for score, rec in hits:
         # Preview is centered on the original question; when the question shares no
         # words with the chunk (the whole point here) it falls back to the chunk's
-        # start — which is fine now that each chunk is a single clean topic.
+        # start, which is fine now that each chunk is a single clean topic.
         preview = rag.snippet(rec.text, QUERY, width=60)
         print(f"  {score:.3f}  ({cite(rec)})  {preview}")
     print()
@@ -131,8 +130,8 @@ if __name__ == "__main__":
     print("=" * 70)
     print(
         "Takeaway: when a question and its answer don't 'look alike,' transforming the\n"
-        "query first — drafting a hypothetical answer (HyDE) or fanning out into\n"
-        "paraphrases (multi-query) — pulls the answer closer in embedding space. Look at\n"
+        "query first, drafting a hypothetical answer (HyDE) or fanning out into\n"
+        "paraphrases (multi-query), pulls the answer closer in embedding space. Look at\n"
         "the 'Two-factor authentication' score: a weak ~0.38 on the raw question, but\n"
         "far higher once transformed. On a large corpus that lift is what lands the\n"
         "right chunk in your top-k. The cost is one extra LLM call before retrieval."

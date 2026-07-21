@@ -1,13 +1,12 @@
 """
-Example 02 — chunking (offline, no API call).
-=============================================
+Example 02: chunking (offline, no API call).
 
 Before you can retrieve, you have to decide what the "pieces" are. You don't
-embed a whole document as one vector — you split it into **chunks** and embed
+embed a whole document as one vector. You split it into **chunks** and embed
 each one, so retrieval can pull back the specific paragraph that answers a
 question instead of a whole file.
 
-This example is completely offline — chunking is just string slicing — so it
+This example is completely offline, since chunking is just string slicing, so it
 costs nothing and needs no key. Run it and watch how the two knobs (chunk size
 and overlap) change the number and shape of the chunks.
 
@@ -46,7 +45,7 @@ sample = rag.chunk_text(text, chunk_size=40, overlap=5)[1]
 print(f"\nExample chunk (size=40):\n  {sample!r}")
 
 print(
-    "\nThere's no universally correct setting — it depends on your documents and "
+    "\nThere's no universally correct setting. It depends on your documents and "
     "questions. Example 05 has you *measure* the effect on retrieval instead of "
     "guessing."
 )

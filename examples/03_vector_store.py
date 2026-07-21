@@ -1,9 +1,8 @@
 """
-Example 03 — a vector store from scratch.
-=========================================
+Example 03: a vector store from scratch.
 
 Example 02 showed that larger chunks "bundle several topics." This one shows why
-that matters: embed the chunks, load them into a store, and ask a question —
+that matters: embed the chunks, load them into a store, and ask a question,
 you'll see which shape of chunk actually surfaces the right answer.
 
 A "vector store" is just a list of (text, vector) pairs plus a way to find the
@@ -14,7 +13,7 @@ vectors closest to a query. Here we build one by hand to see every step:
   3. load them into a VectorStore with their source as metadata,
   4. embed a query and ask the store for the top-k closest chunks.
 
-This is the "retrieval" half of RAG, with no generation yet — just finding the
+This is the "retrieval" half of RAG, with no generation yet, just finding the
 right text. Example 04 adds the model on top.
 
 A chunk that spans two topics has a diluted vector: it points in an "average"
@@ -68,6 +67,6 @@ for score, rec in hits:
     print(f"  {score:.3f}  [{rec.metadata['source']}]  {preview}")
 
 print(
-    "\nThe right chunk floats to the top — focused text, precise vector. "
+    "\nThe right chunk floats to the top: focused text, precise vector. "
     "That ranked list IS retrieval; everything else is deciding what to do with it."
 )

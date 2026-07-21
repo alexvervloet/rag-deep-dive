@@ -1,10 +1,9 @@
 """
-Example 07 — hybrid retrieval, and why fusion is not a free lunch.
-==================================================================
+Example 07: hybrid retrieval, and why fusion is not a free lunch.
 
 You've built both halves of retrieval separately: vector search by *meaning*
 (example 03) and keyword search by *words* (BM25, example 06). Each has a blind
-spot — vectors fumble exact strings like error codes; keyword search is deaf to
+spot. Vectors fumble exact strings like error codes; keyword search is deaf to
 paraphrase. **Hybrid retrieval** runs both and combines the results, hoping to
 get each one's strength.
 
@@ -13,14 +12,14 @@ only helps when they *disagree in useful ways*; when one is confidently wrong, a
 naive combination can drag a good result *down*. This example makes that visible
 by scoring the same corpus five ways on two deliberately opposite queries:
 
-  1. a paraphrase query ("how do I get my notes out of the app?") — the answer
+  1. a paraphrase query ("how do I get my notes out of the app?"), where the answer
      talks about "export," a word the query never uses. Vectors nail it; BM25 is
      not just weak but actively misled, ranking a keyword-dense intro chunk above
      the answer. Watch a 50/50 blend make things *worse* than vector-only.
-  2. an exact-term query ("what does error NN-413 mean?") — a rare token both
+  2. an exact-term query ("what does error NN-413 mean?"), a rare token both
      halves agree on, so every fusion method safely ranks it first.
 
-The five methods per query: vector-only, keyword-only, then three ways to fuse —
+The five methods per query: vector-only, keyword-only, then three ways to fuse:
 a 50/50 score blend, Reciprocal Rank Fusion (RRF), and a vector-weighted blend.
 The keyword half reuses the BM25 index from example 06 (see
 [rag/keyword.py](../rag/keyword.py)).
@@ -48,7 +47,7 @@ store = rag.index_documents(docs, chunk_size=120, overlap=20)
 print(f"Indexed {len(store)} chunks.\n")
 print(
     "Reading the output: 'rel' is each score rescaled so the best match in that\n"
-    "list = 1.000 — a relative rank, not an absolute similarity. The parentheses\n"
+    "list = 1.000, a relative rank rather than an absolute similarity. The parentheses\n"
     "show where the score came from (cos = cosine, bm25 = keyword, v/k = the\n"
     "normalized halves, v#/k# = each half's rank for RRF).\n"
 )
@@ -79,7 +78,7 @@ def rrf(rank_lists: list[list[int]], k: int = 60) -> list[float]:
 
     Each method contributes 1 / (k + rank) for every item, and we sum those. It
     only cares about ordering, so it's immune to the scale mismatch that forces
-    us to normalize score blends — but it still trusts every method equally, so a
+    us to normalize score blends, but it still trusts every method equally, so a
     result one half buries deep (a big rank) is hard to rescue. k=60 is the
     common default; it softens the gap between the very top ranks.
     """
@@ -95,7 +94,7 @@ def show_top(
     print(f"  {label}")
     for i in order:
         # rag.snippet centers the preview on the query match, so the printed line
-        # shows *why* the chunk ranked — not just its first words. (See rag/preview.py.)
+        # shows *why* the chunk ranked, not just its first words. (See rag/preview.py.)
         preview = rag.snippet(records[i].text, query)
         # `scores[i]` is the rescaled rank-score (best = 1.000); `annot[i]` shows
         # what it came from, so the reader can see 1.000 != perfect match.
@@ -152,21 +151,21 @@ for query in [
 print(
     "The paraphrase query is the cautionary tale. Vector search ranks the right "
     "chunk #1; BM25 ranks it #11, because the query's only keywords ('notes', "
-    "'app') describe the product, not 'export' — so BM25 confidently prefers a "
+    "'app') describe the product, not 'export', so BM25 confidently prefers a "
     "keyword-dense intro chunk. The 50/50 blend inherits that mistake and drops "
     "the answer to ~#8, *worse than vector-only*. RRF is more robust (it fuses "
     "ranks, not noisy scores) but still can't undo an #11, landing around #5. "
-    "Only a heavily vector-weighted blend (90/10) recovers #1 — at which point "
+    "Only a heavily vector-weighted blend (90/10) recovers #1, at which point "
     "you've nearly switched keyword off."
 )
 print(
     "\nThe exact-code query is the easy case: both halves rank the NN-413 chunk "
-    "#1, so every fusion method agrees. That's the real rule of thumb — hybrid "
+    "#1, so every fusion method agrees. That's the real rule of thumb: hybrid "
     "shines when the two halves *agree*, and needs weighting or query-routing "
     "when they don't. It is a tool to tune, not a free lunch."
 )
 print(
-    "\n(Aside: the answer to *both* queries lives in the same chunk — fixed-size "
+    "\n(Aside: the answer to *both* queries lives in the same chunk. Fixed-size "
     "chunking merged the 'Importing' error text and the 'Exporting' section into "
     "one. Previews are centered on the match, so you can see the relevant "
     "sentence even when it starts mid-chunk. Chunk boundaries matter too.)"

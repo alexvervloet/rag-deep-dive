@@ -1,10 +1,9 @@
 """
-Example 06 — keyword search from scratch (BM25).
-================================================
+Example 06: keyword search from scratch (BM25).
 
 Example 03 built the *semantic* half of retrieval: embed the chunks, and a query
 finds them by **meaning**, even when it shares no words with the answer. This
-example builds the other half — **keyword** (lexical) search — which finds chunks
+example builds the other half, **keyword** (lexical) search, which finds chunks
 by the **words** they literally contain. It's the mirror image, and it's exactly
 what embeddings are worst at: exact strings like product names, error codes, and
 IDs, which carry little semantic signal but must match precisely.
@@ -13,15 +12,15 @@ We use **BM25**, the classic search-engine ranking function. It's smarter than
 just counting shared words (see [rag/keyword.py](../rag/keyword.py)): it weighs
 each query word by how *rare* it is (a shared "the" means nothing; a shared
 "NN-413" means everything) and normalizes for chunk length. And because it's pure
-word-counting arithmetic — no model, no embeddings — it's **completely offline**:
+word-counting arithmetic, no model and no embeddings, it's **completely offline**:
 no key, no cost.
 
 We run two deliberately different queries to see where keyword search shines and
 where it falls down:
 
-  1. an exact-term query ("what does error NN-413 mean?") — keyword search nails
+  1. an exact-term query ("what does error NN-413 mean?"), where keyword search nails
      the rare code, and
-  2. a paraphrase query ("how do I get my notes out of the app?") — where the
+  2. a paraphrase query ("how do I get my notes out of the app?"), where the
      answer talks about "export" and "Markdown", not the user's words, so keyword
      search whiffs.
 
@@ -30,7 +29,7 @@ with vector search into *hybrid* retrieval.
 
 Run it:
 
-    python examples/06_keyword_search.py        # offline — no key, no cost
+    python examples/06_keyword_search.py        # offline, no key, no cost
 """
 
 import os
@@ -43,7 +42,7 @@ import rag
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 docs = rag.load_corpus(os.path.join(REPO_ROOT, "corpus"))
 
-# Chunk the corpus WITHOUT embedding it — keyword search needs no vectors, so
+# Chunk the corpus WITHOUT embedding it. Keyword search needs no vectors, so
 # there's no API call here at all. Each entry keeps its source for display.
 chunks: list[tuple[str, str]] = []
 for source, text in docs:
@@ -68,7 +67,7 @@ show_top("how do I get my notes out of the app?")
 
 # Why BM25 beats naïve word-counting: it weighs each word by how *rare* it is
 # (IDF). A shared common word barely moves the score; a shared rare one decides it.
-# The exact code is rare, so one match dominates — compare it to a common word:
+# The exact code is rare, so one match dominates. Compare it to a common word:
 rare, common = "nn-413", "the"
 print(f"IDF({rare!r}) = {index.idf.get(rare, 0.0):.2f}   vs   IDF({common!r}) = {index.idf.get(common, 0.0):.2f}")
 print("(that gap is the whole edge BM25 has over just counting shared words)\n")
@@ -87,8 +86,8 @@ print(f"Highest-IDF words (rare):   {len(tied)} words tie at {top_idf:.2f}, each
 print(f"                            (including {rare!r}, which is why one match on it decides the ranking)")
 
 print(
-    "\nKeyword search is decisive on the exact code but whiffs on the paraphrase — "
+    "\nKeyword search is decisive on the exact code but whiffs on the paraphrase: "
     "the answer says 'export' and 'Markdown', words the query never uses. Vector "
     "search (example 03) is the exact opposite. Example 07 blends the two so you "
-    "get both strengths at once — that's hybrid retrieval."
+    "get both strengths at once: that's hybrid retrieval."
 )

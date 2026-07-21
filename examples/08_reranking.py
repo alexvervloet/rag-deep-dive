@@ -1,8 +1,7 @@
 """
-Example 08 — reranking: over-retrieve, then reorder.
-====================================================
+Example 08: reranking: over-retrieve, then reorder.
 
-Fast retrieval (cosine over embeddings) is cheap but approximate — the truly best
+Fast retrieval (cosine over embeddings) is cheap but approximate. The truly best
 chunk isn't always #1. A common fix is a two-stage pipeline:
 
   1. RETRIEVE a generous handful (say top 8) with the cheap vector search.
@@ -70,7 +69,7 @@ print(f"Query: {query!r}\n")
 # Stage 1: over-retrieve.
 candidates = rag.retrieve(store, query, k=8)
 
-print("Stage 1 — vector retrieval (top 8):")
+print("Stage 1, vector retrieval (top 8):")
 for n, (score, rec) in enumerate(candidates, start=1):
     preview = rag.snippet(rec.text, query, width=70)
     print(f"  {n}. {score:.3f}  [{rec.metadata['source']}]  {preview}")
@@ -78,7 +77,7 @@ for n, (score, rec) in enumerate(candidates, start=1):
 # Stage 2: rerank down to the best 3.
 reranked = llm_rerank(query, candidates, top_n=3)
 
-print("\nStage 2 — after LLM reranking (top 3):")
+print("\nStage 2, after LLM reranking (top 3):")
 for n, (score, rec) in enumerate(reranked, start=1):
     preview = rag.snippet(rec.text, query, width=70)
     print(f"  {n}. [{rec.metadata['source']}]  {preview}")
@@ -86,7 +85,7 @@ for n, (score, rec) in enumerate(reranked, start=1):
 print(
     "\nReranking promotes the passage that truly answers the question even when it "
     "wasn't the closest vector match. Feed the reranked top-k to the model and the "
-    "answer improves — for the cost of one extra call over a few candidates.\n"
+    "answer improves, for the cost of one extra call over a few candidates.\n"
     "(The order is the model's judgment, so the lower ranks may shuffle run to run; "
     "what's stable is the strongest answer being pulled to the top.)"
 )

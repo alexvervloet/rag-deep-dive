@@ -1,22 +1,21 @@
 """
-Example 15 — approximate search: trading a little recall for a lot of speed.
-============================================================================
+Example 15: approximate search: trading a little recall for a lot of speed.
 
 Our vector store (§4) does brute force: score the query against EVERY vector,
 sort, return the top-k. Exact, and instant for the few thousand chunks in a normal
-corpus. But it's O(n) per query — at millions of vectors it's too slow, and that's
+corpus. But it's O(n) per query, so at millions of vectors it's too slow, and that's
 when production RAG switches to an **approximate nearest-neighbour (ANN)** index:
 FAISS, hnswlib, or pgvector's IVFFlat/HNSW.
 
 ANN buys speed by *not looking at every vector*. To see the tradeoff instead of
-importing it, we build the simplest such index by hand — an **IVF** (the idea
+importing it, we build the simplest such index by hand: an **IVF** (the idea
 behind pgvector's IVFFlat), in `rag/ann.py`: bucket the vectors into clusters once,
 then at query time only scan the few clusters nearest the query. Scan fewer
-clusters (`n_probe`) and you touch a fraction of the data — faster, but you may
+clusters (`n_probe`) and you touch a fraction of the data: faster, but you may
 miss a neighbour sitting just over a cluster border. That miss rate is **recall**.
 
 This one is fully OFFLINE and needs no key: we generate a pile of synthetic
-*clustered* vectors (the effect only shows at a scale — thousands of vectors — the
+*clustered* vectors (the effect only shows at thousands of vectors, a scale the
 tiny demo corpus can't reach), then measure the approximate index against the exact
 brute-force answer as we turn the `n_probe` dial.
 
@@ -35,7 +34,7 @@ import rag
 from rag.store import Record
 
 # --- A synthetic dataset large enough for the tradeoff to show. ------------
-# Real embeddings aren't uniform noise — related documents cluster together in
+# Real embeddings aren't uniform noise. Related documents cluster together in
 # vector space. We mimic that: scatter a set of "topic" centers, then place each
 # vector as a center plus a little noise. That structure is exactly what an IVF
 # index exploits, so the recall-for-speed tradeoff looks like it does in practice.
@@ -63,7 +62,7 @@ def near_center(center: list[float], noise: float = 1.0) -> list[float]:
 
 def main() -> None:
     print(f"Building a synthetic index: {N_VECTORS} clustered vectors, dim {DIM}, "
-          f"{N_CLUSTERS} IVF buckets. (Offline — no embeddings, no key.)\n")
+          f"{N_CLUSTERS} IVF buckets. (Offline, no embeddings, no key.)\n")
 
     records = [
         Record(text=f"vec-{i}", vector=near_center(_CENTERS[i % N_TOPICS]), metadata={})
@@ -96,11 +95,11 @@ def main() -> None:
     print(
         "\nRead the dial: n_probe=1 scans a sliver of the data (~2%) but misses roughly a\n"
         "quarter of the true neighbours; crank it to all clusters and you're back to\n"
-        "exact results — having done MORE work than plain brute force, because you also\n"
+        "exact results, having done MORE work than plain brute force, because you also\n"
         "scored the centroids. The sweet spot is in between: a few probes (here ~7% of\n"
         "the vectors) recover almost all the recall. That is the whole ANN\n"
         "bargain. Real indexes (HNSW, IVFFlat) are far cleverer than this toy, but they\n"
-        "all sell the same thing — a recall-for-speed knob you tune against an eval\n"
+        "all sell the same thing: a recall-for-speed knob you tune against an eval\n"
         "(§10), never on faith. Reach for one only when brute force is genuinely too\n"
         "slow; for a few thousand chunks, `store.py` is the right answer."
     )

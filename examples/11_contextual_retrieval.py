@@ -1,9 +1,8 @@
 """
-Example 11 — contextual retrieval.
-==================================
+Example 11: contextual retrieval.
 
 A chunk ripped out of its document often loses the context that makes it findable.
-"The cap is 500 GB." — the cap on *what*, for *which plan*? Embedded alone, that
+"The cap is 500 GB." The cap on *what*, for *which plan*? Embedded alone, that
 sentence is indistinguishable from every other plan's "the cap is X," so retrieval
 can't tell which one answers "what's the cap on the Cedar plan?".
 
@@ -13,7 +12,7 @@ within its document*. Now the chunk's vector carries "this is the Cedar plan's
 storage cap," so the query finds the right one. The original chunk text is still
 what you show the model; the context is only there to improve the *embedding*.
 
-This is deliberately the hardest case for retrieval — several near-identical chunks
+This is deliberately the hardest case for retrieval: several near-identical chunks
 that differ only by an entity (the plan name) that the chunk text never mentions.
 Modern embeddings are strong enough that a chunk which merely *implies* its context
 usually still ranks; the place they genuinely fail is disambiguation like this,
@@ -23,7 +22,7 @@ We use a tiny purpose-built corpus below (not corpus/, which is written too self
 containedly to ever be under-specified). Each plan doc puts its bare "the cap is X"
 fact in its own paragraph, naming neither the plan nor "storage".
 
-(One LLM call per chunk at index time — a one-time ingest cost. A real system does
+(One LLM call per chunk at index time, a one-time ingest cost. A real system does
 one context pass per document and caches it.)
 
 Run it:
@@ -60,7 +59,7 @@ MINI_CORPUS = [
 QUERY = sys.argv[1] if len(sys.argv) > 1 else "what is the storage cap on the Cedar plan?"
 K = 3
 
-# One (chunk, source) per paragraph — small enough that the bare fact stands alone.
+# One (chunk, source) per paragraph, small enough that the bare fact stands alone.
 CHUNKS = [(para, source) for source, doc in MINI_CORPUS for para in rag.chunk_paragraphs(doc)]
 
 
@@ -88,7 +87,7 @@ def build_contextual():
     """Prepend an LLM-written context sentence to each chunk *before embedding*.
 
     We embed `context + chunk` but keep the original `chunk` as the stored text, so
-    the model still sees clean source text — only retrieval benefits.
+    the model still sees clean source text; only retrieval benefits.
     """
     docs = dict(MINI_CORPUS)
     to_embed = [f"{context_for(c, docs[s], s)}\n{c}" for c, s in CHUNKS]
@@ -119,11 +118,11 @@ if __name__ == "__main__":
 
     print("=" * 70)
     print(
-        "Takeaway: plain retrieval returns the WRONG plan's cap at #1 — the three\n"
+        "Takeaway: plain retrieval returns the WRONG plan's cap at #1. The three\n"
         "'the cap is X' chunks are near-identical and none names its plan, so the\n"
         "embedding can't disambiguate. Prepending a one-sentence 'this is the Cedar\n"
         "plan's storage cap' before embedding (while still showing the model the clean\n"
-        "chunk) puts the right one on top. That's the cheap, high-leverage win — and it\n"
+        "chunk) puts the right one on top. That's the cheap, high-leverage win, and it\n"
         "matters most exactly where modern embeddings struggle: telling near-identical\n"
         "passages apart by an entity the text never states."
     )

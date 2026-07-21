@@ -1,10 +1,9 @@
 """
-Example 01 — embeddings & cosine, the foundation (recap).
-=========================================================
+Example 01: embeddings & cosine, the foundation (recap).
 
 RAG is built on one capability: turning text into vectors that capture *meaning*,
 so you can measure how related two pieces of text are. If you worked through the
-sibling repos (openai-api-deep-dive / claude-api-deep-dive), this is review — skim
+sibling repos (openai-api-deep-dive / claude-api-deep-dive), this is review, so skim
 it and move on. If not, this is the one idea everything else depends on.
 
   - An *embedding* turns a string into a list of numbers (a vector).
@@ -36,7 +35,7 @@ query = "How do I get my notes out of the app?"
 candidates = [
     "Any notebook can be exported to Markdown, PDF, or HTML.",  # relevant, no shared words
     "Support operates Monday to Friday, 9 to 5.",  # unrelated
-    "Deleted notes stay in Trash for 30 days.",  # near-miss — edged out the export result by ~0.001
+    "Deleted notes stay in Trash for 30 days.",  # near-miss, edged out the export result by ~0.001
 ]
 
 # Embed the documents and the query. (We pass input_type so the Voyage stack can
@@ -56,6 +55,6 @@ for text, vec in ranked:
 
 print(
     "\nNotice the second result shares no words with the query yet nearly ties "
-    "for first — 'export' ≈ 'get my notes out'. That semantic match is what "
+    "for first: 'export' is close to 'get my notes out'. That semantic match is what "
     "makes retrieval possible."
 )

@@ -1,22 +1,21 @@
 """
-Example 09 — evaluation: is your RAG actually working?
-======================================================
+Example 09: evaluation: is your RAG actually working?
 
-Every knob so far — chunk size, hybrid weighting, reranking — is a guess until you
+Every knob so far (chunk size, hybrid weighting, reranking) is a guess until you
 *measure*. RAG has two things to evaluate, and they fail independently:
 
   - RETRIEVAL: did the right chunk come back at all? If not, the model never had a
     chance. Two standard metrics:
-      * hit rate @ k — fraction of questions whose correct source is in the top k.
-      * MRR (mean reciprocal rank) — 1/rank of the first correct hit, averaged.
+      * hit rate @ k: fraction of questions whose correct source is in the top k.
+      * MRR (mean reciprocal rank): 1/rank of the first correct hit, averaged.
         Rewards ranking the right chunk *higher*, not just including it.
   - ANSWER correctness: given good context, did the model produce the right
-    answer? Here we use a simple check — does the expected fact appear in the
+    answer? Here we use a simple check: does the expected fact appear in the
     answer? (Production setups often use an "LLM judge" for fuzzier grading.)
 
 We score against a tiny labelled set: a question, which document should answer it,
 and a fact the answer must contain. A real eval set is bigger and harder, but the
-mechanics are identical — and even five questions catch regressions when you
+mechanics are identical, and even five questions catch regressions when you
 change a knob.
 
 Run it:
@@ -90,6 +89,6 @@ print(f"Answer correctness:      {answer_correct}/{n} = {answer_correct / n:.0%}
 
 print(
     "\nThese three numbers are your dashboard. Change a knob (chunk size, k, hybrid "
-    "weighting, reranking) and re-run — if a metric drops, you just caught a "
+    "weighting, reranking) and re-run. If a metric drops, you just caught a "
     "regression you'd otherwise have shipped."
 )

@@ -1,24 +1,23 @@
 """
-Example 14 — document ingestion: from messy sources to clean, structured chunks.
-================================================================================
+Example 14: document ingestion: from messy sources to clean, structured chunks.
 
 The corpus here is tidy Markdown, but real documents arrive as PDFs, HTML pages,
 Word files, and wiki exports. Ingestion is the unglamorous step that turns any of
-them into the `(source, text)` the pipeline wants — and doing it *well* (respecting
+them into the `(source, text)` the pipeline wants, and doing it *well* (respecting
 the document's structure) improves every downstream retrieval.
 
 This script shows three ingestion ideas you can apply to real corpora:
 
   1. STRUCTURE-AWARE CHUNKING. Instead of a blind sliding window, split on the
-     document's own headings — the same `chunk_markdown_sections()` that example
+     document's own headings, the same `chunk_markdown_sections()` that example
      13 introduced. Each section becomes a chunk that's about one thing, and its
-     heading becomes metadata — so retrieval can cite "Billing > Refunds."
+     heading becomes metadata, so retrieval can cite "Billing > Refunds."
 
   2. PARSING NON-MARKDOWN. A quick HTML→text pass with the standard library shows
      that "ingest a web page" reduces to the same `(source, text)` shape. (PDFs are
      the same idea with `pdfplumber`/`pypdf`; we note it rather than add a dep.)
 
-  3. CLEANING. Collapse whitespace, drop boilerplate — small hygiene that stops
+  3. CLEANING. Collapse whitespace, drop boilerplate: small hygiene that stops
      junk tokens from polluting your chunks and your bill.
 
 The first two parts run **offline** (pure parsing). The indexing demo at the end
@@ -45,7 +44,7 @@ load_dotenv()
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Structure-aware splitting lives in the library now (rag/chunking.py), shared
-# with example 13 — ingestion's job is to *feed* it clean text from any format.
+# with example 13. Ingestion's job is to *feed* it clean text from any format.
 split_markdown_sections = rag.chunk_markdown_sections
 
 
