@@ -1,24 +1,23 @@
 """
-rag/ann.py — an approximate nearest-neighbour index, from scratch.
-==================================================================
+rag/ann.py: an approximate nearest-neighbour index, from scratch.
 
 `store.py` does brute force: score the query against *every* vector, sort, return
-the top-k. That's exact and instant for thousands of chunks — but O(n) per query,
+the top-k. That's exact and instant for thousands of chunks, but O(n) per query,
 so at millions of vectors it's too slow. Production systems switch to an
 **approximate** index (FAISS, hnswlib, pgvector's IVFFlat/HNSW): trade a little
 recall for a large speedup by *not* looking at every vector.
 
-This file builds the simplest such index — an **IVF** ("inverted file"), the same
-idea behind pgvector's IVFFlat — by hand, so the tradeoff is visible rather than
+This file builds the simplest such index, an **IVF** ("inverted file"), the same
+idea behind pgvector's IVFFlat, by hand, so the tradeoff is visible rather than
 imported:
 
   1. Pick `n_clusters` centroids and assign every vector to its nearest one. Now
      the vectors are bucketed into clusters (done once, at build time).
   2. To search, score the query against the *centroids* only, then brute-force
-     within the `n_probe` closest clusters — skipping the rest of the data.
+     within the `n_probe` closest clusters, skipping the rest of the data.
 
 Probe every cluster (`n_probe == n_clusters`) and you get exact results by a
-slower route. Probe fewer and you scan a fraction of the data — much faster, but
+slower route. Probe fewer and you scan a fraction of the data: much faster, but
 you may miss a neighbour that sat just over a cluster border. That miss rate is
 **recall**, and `examples/15_approximate_index.py` measures it against the exact
 brute-force answer. The lesson is the dial, not this toy index: real ANN libraries

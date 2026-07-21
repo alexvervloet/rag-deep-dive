@@ -1,11 +1,10 @@
 """
-rag/providers.py — the ONLY file that talks to a model provider.
-================================================================
+rag/providers.py: the ONLY file that talks to a model provider.
 
 This is the keystone of the whole repo's design. RAG is an *architecture*, not a
 provider feature: chunking, vector search, reranking, and evaluation don't care
-who serves the model. So we hide the one provider-specific part — turning text
-into vectors (`embed`) and turning a prompt into an answer (`generate`) — behind
+who serves the model. So we hide the one provider-specific part, turning text
+into vectors (`embed`) and turning a prompt into an answer (`generate`), behind
 two tiny functions. Everything else in `rag/` and `examples/` is pure RAG logic.
 
 Pick your stack with `PROVIDER` in `.env`:
@@ -17,7 +16,7 @@ Pick your stack with `PROVIDER` in `.env`:
 
 If you've worked through the sibling repos (openai-api-deep-dive /
 claude-api-deep-dive), this is exactly the embeddings + chat calls you already
-know — just wrapped so the rest of the code can stay provider-agnostic.
+know, just wrapped so the rest of the code can stay provider-agnostic.
 """
 
 import os
@@ -47,7 +46,7 @@ def required_keys() -> list[str]:
 
 
 def describe() -> str:
-    """One-line summary of the active stack — handy for examples to print."""
+    """One-line summary of the active stack, handy for examples to print."""
     p = provider_name()
     if p == "openai":
         return f"openai  (embed={_OPENAI_EMBED}, chat={_OPENAI_CHAT})"
@@ -132,9 +131,9 @@ def embed(texts: list[str], input_type: str = "document") -> list[list[float]]:
 def generate(system: str, user: str, max_tokens: int = 512) -> str:
     """Turn a (system, user) prompt into a text answer.
 
-    The two providers differ in shape — OpenAI puts the system prompt in the
+    The two providers differ in shape. OpenAI puts the system prompt in the
     messages list and returns `choices[0].message.content`; Claude takes a
-    top-level `system=` and returns a list of content blocks — so we normalize
+    top-level `system=` and returns a list of content blocks, so we normalize
     both to a plain string here.
     """
     p = provider_name()

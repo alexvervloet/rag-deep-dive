@@ -1,8 +1,7 @@
 """
-rag/preview.py — a display helper for the examples.
-===================================================
+rag/preview.py: a display helper for the examples.
 
-This is NOT a moving part of RAG — it's pure presentation, and the one file here
+This is NOT a moving part of RAG. It's pure presentation, and the one file here
 you can skip if you only care about retrieval. But it fixes a genuinely confusing
 habit in every example that prints a retrieved chunk.
 
@@ -12,14 +11,14 @@ chunk, and a fixed-size chunk may even open on a different topic entirely (see
 example 07, where a chunk that answers "how do I export?" opens on an unrelated
 import-error code). `snippet()` centers a short preview on where the query hit, so
 the printed line shows *why* the chunk came back. It falls back to the chunk's
-start when no query word appears — which is itself a useful signal.
+start when no query word appears, which is itself a useful signal.
 
 Pure Python, no API calls.
 """
 
 import re
 
-# Words too common to be worth centering a preview on — they'd match everywhere.
+# Words too common to be worth centering a preview on; they'd match everywhere.
 _STOP = {"how", "do", "i", "get", "my", "of", "the", "a", "an", "to", "is", "in",
          "on", "does", "what", "mean", "for", "your", "you", "and", "or", "it",
          "can", "how's", "with", "are", "was", "if"}

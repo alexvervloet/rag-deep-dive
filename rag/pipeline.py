@@ -1,6 +1,5 @@
 """
-rag/pipeline.py — the RAG loop: index -> retrieve -> answer.
-============================================================
+rag/pipeline.py: the RAG loop: index -> retrieve -> answer.
 
 This module wires the other three together into the actual flow:
 
@@ -10,7 +9,7 @@ This module wires the other three together into the actual flow:
                          generate, and hand back the answer *and* its sources
 
 The whole idea of RAG in one sentence: a model can only answer from what's in its
-context window, so we put the most relevant chunks there — and we instruct the
+context window, so we put the most relevant chunks there, and we instruct the
 model to answer ONLY from them and to cite which chunk it used. That grounding +
 citation discipline is what separates RAG from "the model guessing."
 """
@@ -25,7 +24,7 @@ from .store import Record, VectorStore
 GROUNDED_SYSTEM = (
     "You answer questions using ONLY the numbered context provided in the user "
     "message. Cite the sources you use with bracketed numbers like [1] or [2]. "
-    "If the context does not contain the answer, say you don't know — do not "
+    "If the context does not contain the answer, say you don't know. Do not "
     "guess or rely on outside knowledge."
 )
 
@@ -39,7 +38,7 @@ def index_documents(
 
     Chunk every document, embed all the chunks in as few calls as the provider
     allows, and load them into a store tagged with their source. This is the
-    "ingest" step — the expensive one, run once.
+    "ingest" step: the expensive one, run once.
     """
     texts: list[str] = []
     metadatas: list[dict] = []
@@ -63,7 +62,7 @@ def retrieve(store: VectorStore, query: str, k: int = 4) -> list[tuple[float, Re
 def build_prompt(query: str, hits: list[tuple[float, Record]]) -> str:
     """Assemble the user message: numbered context blocks, then the question.
 
-    Numbering each block is what makes citations possible — the model can refer
+    Numbering each block is what makes citations possible: the model can refer
     to "[2]" and you (or the reader) can map it back to a real source.
     """
     blocks = []
@@ -83,7 +82,7 @@ def answer(
     """The full RAG answer: retrieve, ground, generate.
 
     Returns `(answer_text, hits)` so the caller can show the answer alongside the
-    exact sources it was built from — the basis of trustworthy, checkable output.
+    exact sources it was built from, the basis of trustworthy, checkable output.
     """
     hits = retrieve(store, query, k)
     prompt = build_prompt(query, hits)

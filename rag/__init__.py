@@ -1,17 +1,17 @@
 """
-rag — a small, from-scratch retrieval-augmented-generation library.
+rag: a small, from-scratch retrieval-augmented-generation library.
 
 Everything here is built to be *read*, not just used. Five modules, each one
 moving part of RAG:
 
-  providers.py  — the ONLY file that talks to an LLM provider (embed + generate)
-  chunking.py   — splitting documents into retrievable pieces
-  store.py      — an in-memory vector store (brute-force cosine search)
-  keyword.py    — keyword search (BM25), the lexical counterpart to the store
-  pipeline.py   — tying it together: index -> retrieve -> answer
+  providers.py  the ONLY file that talks to an LLM provider (embed + generate)
+  chunking.py   splitting documents into retrievable pieces
+  store.py      an in-memory vector store (brute-force cosine search)
+  keyword.py    keyword search (BM25), the lexical counterpart to the store
+  pipeline.py   tying it together: index -> retrieve -> answer
 
 plus two helpers: loader.py (read a folder of docs) and preview.py (a display
-helper the examples use to print retrieved chunks readably — not RAG itself).
+helper the examples use to print retrieved chunks readably, not RAG itself).
 
 Import the pieces you need, e.g.:
 

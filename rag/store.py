@@ -1,6 +1,5 @@
 """
-rag/store.py — a tiny vector store, built from scratch.
-=======================================================
+rag/store.py: a tiny vector store, built from scratch.
 
 A "vector store" sounds fancy; at heart it's just:
 
@@ -14,7 +13,7 @@ compute cosine similarity against every stored vector and return the top-k.
 Brute force is O(n) per query. For a few hundred or few thousand chunks that's
 instant, and it keeps the logic completely transparent. When you have millions
 of vectors you switch to an approximate-nearest-neighbour index (FAISS, hnswlib)
-or a hosted vector database (pgvector, Pinecone, Weaviate) — same idea, cleverer
+or a hosted vector database (pgvector, Pinecone, Weaviate): same idea, cleverer
 data structure. That swap is the main thing a "production RAG" course adds on top
 of this file; the *concept* doesn't change.
 """
@@ -27,7 +26,7 @@ from dataclasses import dataclass, field
 def cosine_similarity(a: list[float], b: list[float]) -> float:
     """Cosine of the angle between two vectors: 1.0 = same direction (meaning),
     0 = unrelated. The same by-hand formula from the sibling repos' embeddings
-    examples — no math libraries needed."""
+    examples, no math libraries needed."""
     dot = sum(x * y for x, y in zip(a, b))
     norm_a = math.sqrt(sum(x * x for x in a))
     norm_b = math.sqrt(sum(y * y for y in b))

@@ -1,11 +1,10 @@
 """
-rag/loader.py — read a folder of documents into (name, text) pairs.
-===================================================================
+rag/loader.py: read a folder of documents into (name, text) pairs.
 
 Trivial on purpose: glob the `.md` / `.txt` files in a directory and read each
 one. The rest of the pipeline takes `(source_name, text)` tuples, and this is
 where they come from. Real systems ingest PDFs, HTML, databases, and Slack
-exports — but every one of those reduces to "get me some text and a name for it,"
+exports, but every one of those reduces to "get me some text and a name for it,"
 which is all the pipeline needs.
 """
 

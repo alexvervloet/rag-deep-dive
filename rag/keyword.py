@@ -1,11 +1,10 @@
 """
-rag/keyword.py — keyword search from scratch (BM25).
-====================================================
+rag/keyword.py: keyword search from scratch (BM25).
 
 Vector search (store.py) matches on *meaning*. This module is its opposite
 number: **lexical** search, which matches on the actual *words*. That sounds
 primitive next to embeddings, but it's exactly what you want for the things
-embeddings are worst at — product names, error codes, IDs, rare jargon — tokens
+embeddings are worst at: product names, error codes, IDs, rare jargon, tokens
 that carry little semantic signal but must match *exactly*.
 
 The algorithm is **BM25**, the workhorse behind decades of search engines. It
@@ -17,7 +16,7 @@ scores a chunk for a query by asking three questions about each query word:
 
 The intuition each one encodes:
 
-  - **More occurrences → higher score**, but with *diminishing returns* — the 5th
+  - **More occurrences -> higher score**, but with diminishing returns: the 5th
     mention of a word doesn't matter as much as the 1st (that's the `k1` knob).
   - **Rare words matter more.** A chunk sharing the word "the" with your query
     tells you nothing; a chunk sharing "NN-413" tells you almost everything. IDF
@@ -25,7 +24,7 @@ The intuition each one encodes:
   - **Shorter chunks win ties.** A word match in a focused 20-word chunk is a
     stronger signal than the same match buried in a 300-word one (the `b` knob).
 
-That's the whole difference from naïvely counting shared words — and it's why a
+That's the whole difference from naïvely counting shared words, and it's why a
 real keyword scorer beats term-counting. No model, no embeddings, no API call:
 BM25 is pure arithmetic over word counts, so it's free and instant.
 """
@@ -50,7 +49,7 @@ class BM25Index:
     Build it once from the chunk texts; then `scores(query)` returns a BM25 score
     for every chunk (aligned to the input order, so you can zip it back to your
     records) and `search(query, k)` returns the top-k. `k1` and `b` are the
-    standard BM25 knobs — the defaults are the usual, well-behaved starting point.
+    standard BM25 knobs; the defaults are the usual, well-behaved starting point.
     """
 
     def __init__(self, texts: list[str], k1: float = 1.5, b: float = 0.75) -> None:

@@ -1,9 +1,8 @@
 """
-rag/chunking.py — split documents into retrievable pieces.
-==========================================================
+rag/chunking.py: split documents into retrievable pieces.
 
 You rarely embed a whole document as one vector. A long page covers many topics,
-and one vector can only point in one "average" direction — so it matches
+and one vector can only point in one "average" direction, so it matches
 everything vaguely and nothing well. Instead you split the document into
 **chunks** and embed each chunk. Retrieval then pulls back the specific
 paragraph that answers the question, not the whole file.
@@ -17,7 +16,7 @@ The two knobs that matter, and their tradeoffs:
   - overlap: chunks share a few words at their boundaries so a sentence that
     straddles a split isn't lost to both neighbours. Costs a little duplication.
 
-There's no universally right setting — it depends on your documents and
+There's no universally right setting. It depends on your documents and
 questions, which is exactly why example 05 has you *measure* it. This module is
 pure Python and makes no API calls, so it's free to explore.
 """
@@ -33,7 +32,7 @@ def chunk_text(text: str, chunk_size: int = 120, overlap: int = 20) -> list[str]
 
     We count in *words*, not characters or tokens, because it's simple and
     provider-agnostic. (Production systems often chunk by tokens so a chunk maps
-    cleanly to the model's limits — a refinement, not a different idea.)
+    cleanly to the model's limits: a refinement, not a different idea.)
     """
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive")
@@ -61,7 +60,7 @@ def chunk_paragraphs(text: str) -> list[str]:
 
     The alternative to fixed-size windows: respect the document's own structure.
     Great when paragraphs are self-contained (FAQs, docs, articles); weaker when
-    they vary wildly in length. A common production approach blends the two —
+    they vary wildly in length. A common production approach blends the two:
     split on paragraphs, then pack/sub-split toward a target size.
     """
     paras = [p.strip() for p in text.split("\n\n")]
@@ -72,8 +71,8 @@ def chunk_markdown_sections(text: str) -> list[tuple[str, str]]:
     """Split Markdown on its headings, returning (heading, body) sections.
 
     The most *structure-aware* splitter here: instead of a fixed-size window that
-    cuts wherever the word count runs out — happily gluing the tail of one topic
-    onto the head of the next — this cuts only at the document's own `#`/`##`/...
+    cuts wherever the word count runs out, happily gluing the tail of one topic
+    onto the head of the next, this cuts only at the document's own `#`/`##`/...
     headings. Each section is about one thing, and the heading travels with it as
     metadata you can filter and cite ("getting-started.md > Exporting your notes").
 
