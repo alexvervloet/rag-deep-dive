@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-ask_docs.py — the capstone: ask questions over your documents.
-==============================================================
+ask_docs.py: the capstone: ask questions over your documents.
 
 Everything in the repo comes together here. Point it at the `corpus/` folder and
-ask a question; it chunks and embeds the documents (once — the index is cached to
+ask a question; it chunks and embeds the documents (once, since the index is cached to
 disk), retrieves the most relevant chunks, and has the model answer using ONLY
 those chunks, with [n] citations you can check against a table of sources.
 
-It's a real, if small, "chat with your docs" tool — the thing people mean when
+It's a real, if small, "chat with your docs" tool, the thing people mean when
 they say "RAG."
 
 Examples
@@ -26,7 +25,7 @@ Examples
   secrun python hands_on/ask_docs.py "What plans are there?" --rebuild --chunk-size 80
 
 The index is cached in .rag_index.json. It records which provider and chunk
-settings built it, and rebuilds automatically if those change — vectors from one
+settings built it, and rebuilds automatically if those change; vectors from one
 embedding model are meaningless to another.
 """
 
@@ -56,7 +55,7 @@ def build_or_load_index(chunk_size: int, overlap: int, rebuild: bool):
     """Return (store, was_built). Reuse the cached index when it matches the
     current provider and chunk settings; otherwise (re)build and cache it.
 
-    Embedding is the slow, paid step — so we do it once and persist the result,
+    Embedding is the slow, paid step, so we do it once and persist the result,
     exactly as a production system would. The cache header guards against using
     vectors built by a different embedding model.
     """
@@ -136,7 +135,7 @@ def main(argv: list[str]) -> int:
     # The answer, rendered as Markdown (the model often replies with formatting).
     console.print(Markdown(text))
 
-    # The sources behind it — [n] matches the citation markers in the answer.
+    # The sources behind it. [n] matches the citation markers in the answer.
     table = Table(title="\nSources", show_lines=False)
     table.add_column("#", justify="right", style="cyan")
     table.add_column("Document", style="green")
