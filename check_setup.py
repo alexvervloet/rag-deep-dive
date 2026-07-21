@@ -1,12 +1,11 @@
 """
-Setup check — run this first.
-=============================
+Setup check: run this first.
 
     secrun python check_setup.py
 
 It answers one question: "Is my environment ready?" It checks your Python
 version, the installed packages, your chosen PROVIDER, and the API key(s) that
-provider needs — and tells you exactly what to fix. It makes NO API calls, so it
+provider needs, and tells you exactly what to fix. It makes NO API calls, so it
 costs nothing and works even before you've added a key.
 
 Uses only Python's standard library, so it runs even before `pip install` and can
@@ -87,7 +86,7 @@ def check_python():
     if (major, minor) >= (3, 10):
         ok(f"Python {major}.{minor} (3.10+ required)")
         return True
-    fail(f"Python {major}.{minor} — this repo needs Python 3.10 or newer.")
+    fail(f"Python {major}.{minor}: this repo needs Python 3.10 or newer.")
     print("    Install a newer Python from https://www.python.org/downloads/")
     return False
 
@@ -109,9 +108,9 @@ def check_dependencies(provider):
     missing = []
     for import_name, pip_name, purpose in needed:
         if importlib.util.find_spec(import_name) is not None:
-            ok(f"{pip_name} — {purpose}")
+            ok(f"{pip_name}: {purpose}")
         else:
-            fail(f"{pip_name} MISSING — {purpose}")
+            fail(f"{pip_name} MISSING: {purpose}")
             missing.append(pip_name)
     if missing:
         print("\n    Install everything with:")
@@ -130,7 +129,7 @@ def check_keys(env, provider):
         value = _get(env, name)
         if not value or value == placeholder:
             fail(f"{name} is not set.")
-            print("    Store it in your OS keychain and run `secrun python check_setup.py` — see SECRETS.md.")
+            print("    Store it in your OS keychain and run `secrun python check_setup.py`. See SECRETS.md.")
             all_ok = False
         elif not value.startswith(prefix):
             warn(f"{name} is set but doesn't start with '{prefix}'. Double-check it.")
@@ -156,7 +155,7 @@ def main():
         print("Start here:  secrun python examples/01_embeddings_recap.py")
         print("(Example 02 is offline and needs no key.)")
         return 0
-    print(_c("Not ready yet — fix the ✗ items above, then run this again.", "1;31"))
+    print(_c("Not ready yet. Fix the ✗ items above, then run this again.", "1;31"))
     return 1
 
 

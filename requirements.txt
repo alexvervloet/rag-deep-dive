@@ -1,7 +1,7 @@
 # Loads variables from a .env file (like OPENAI_API_KEY) into the environment.
 python-dotenv>=1.0.0
 
-# rich renders Markdown answers and tables of sources in the terminal — used by
+# rich renders Markdown answers and tables of sources in the terminal, used by
 # the ask_docs.py capstone to make output readable.
 rich>=13.0.0
 
@@ -9,10 +9,10 @@ rich>=13.0.0
 # You only strictly need the one matching your PROVIDER (see .env), but both are
 # light, and installing both lets you switch stacks with a single env-var change.
 
-# OpenAI — used when PROVIDER=openai (embeddings + chat).
+# OpenAI: used when PROVIDER=openai (embeddings + chat).
 openai>=1.30.0
 
-# Anthropic + Voyage — used when PROVIDER=claude (Claude chat + Voyage embeddings).
+# Anthropic + Voyage: used when PROVIDER=claude (Claude chat + Voyage embeddings).
 # Anthropic has no first-party embeddings endpoint and recommends Voyage AI.
 anthropic>=0.111.0
 voyageai>=0.3.0
