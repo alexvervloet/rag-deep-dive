@@ -10,9 +10,9 @@ rich>=13.0.0
 # light, and installing both lets you switch stacks with a single env-var change.
 
 # OpenAI: used when PROVIDER=openai (embeddings + chat).
-openai>=1.30.0
+openai>=2.0,<3
 
 # Anthropic + Voyage: used when PROVIDER=claude (Claude chat + Voyage embeddings).
 # Anthropic has no first-party embeddings endpoint and recommends Voyage AI.
-anthropic>=0.111.0
+anthropic>=0.111.0,<1
 voyageai>=0.3.0
