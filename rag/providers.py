@@ -20,6 +20,7 @@ know, just wrapped so the rest of the code can stay provider-agnostic.
 """
 
 import os
+import sys
 from functools import lru_cache
 from typing import cast
 
@@ -62,8 +63,6 @@ def ensure_ready() -> None:
     provider-aware version of the `if not os.getenv(...)` guard in the sibling
     repos' examples.
     """
-    import sys
-
     p = provider_name()
     if p not in _KEYS:
         sys.exit(
