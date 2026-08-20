@@ -6,18 +6,18 @@ of your current billing period.
 
 ## The plans
 
-- **Free** — $0. Limited to 1 GB of total storage and syncing across at most 2
+- **Free**: $0. Limited to 1 GB of total storage and syncing across at most 2
   devices. Includes unlimited notebooks and the core editor.
-- **Plus** — $4 per month (or $40 per year). Raises storage to 50 GB, removes the
+- **Plus**: $4 per month (or $40 per year). Raises storage to 50 GB, removes the
   device limit, and unlocks offline editing and version history.
-- **Team** — $10 per user per month. Everything in Plus, plus shared team
+- **Team**: $10 per user per month. Everything in Plus, plus shared team
   notebooks, admin controls, and centralized billing.
 
 ## What "offline editing" means
 
 Offline editing lets you read and edit notes with no internet connection; changes
 sync the next time you reconnect. It is available on the **Plus and Team plans
-only** — the Free plan requires a connection to edit. All plans can *read* recently
+only**: the Free plan requires a connection to edit. All plans can *read* recently
 opened notes offline from the device cache.
 
 ## Storage limits and overages
@@ -31,7 +31,7 @@ space or upgrade.
 
 Monthly subscriptions are not refundable, but you can cancel any time to stop the
 next charge. Annual subscriptions can be refunded in full within 14 days of
-purchase — contact support@nimbusnotes.example to request one. After 14 days,
+purchase. Contact support@nimbusnotes.example to request one. After 14 days,
 annual plans are non-refundable but remain active until the end of the term.
 
 ## Education and nonprofit discounts

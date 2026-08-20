@@ -12,7 +12,7 @@ address, and the change only takes effect once you click it.
 If you can't sign in, use "Forgot password" on the login screen to receive a reset
 link. If you've also lost access to your two-factor device, use one of the ten
 recovery codes you saved when enabling 2FA. If you have neither the password nor a
-recovery code, support cannot restore access — this is a deliberate security
+recovery code, support cannot restore access. This is a deliberate security
 tradeoff, not an oversight.
 
 ## Contacting support

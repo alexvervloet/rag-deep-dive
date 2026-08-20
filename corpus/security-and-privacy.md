@@ -12,7 +12,7 @@ that is not currently supported.
 
 ## Two-factor authentication
 
-You can — and should — enable two-factor authentication (2FA) under Settings ->
+You can, and should, enable two-factor authentication (2FA) under Settings ->
 Security. Nimbus Notes supports authenticator apps (TOTP) and hardware security
 keys (WebAuthn). SMS codes are intentionally not supported, because SIM-swapping
 makes them weak. When you enable 2FA, you are shown ten one-time recovery codes;

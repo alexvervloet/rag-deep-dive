@@ -17,7 +17,7 @@ Press Ctrl+N (Cmd+N on macOS) anywhere in the app to start a new note. Notes
 support Markdown, checklists, code blocks, and image attachments. The first line
 of a note automatically becomes its title.
 
-The Quick Capture window — opened with the global shortcut Ctrl+Shift+Space — lets
+The Quick Capture window, opened with the global shortcut Ctrl+Shift+Space, lets
 you jot a note without switching to the app. Quick Capture always saves to your
 Inbox notebook.
 
