@@ -48,7 +48,7 @@ pip install -r requirements.txt
 # 3. Choose your provider (set PROVIDER in .env); your key(s) load separately
 cp .env.example .env
 #    Your API key(s) do NOT go in .env. Store them in your OS keychain and run
-#    lessons with `secrun`; 2-minute setup in ../SECRETS.md. Default is openai
+#    lessons with `secrun`; 2-minute setup in ../docs/SECRETS.md. Default is openai
 #    (one key); claude needs ANTHROPIC_API_KEY + VOYAGE_API_KEY.
 
 # 4. Confirm everything is wired up (makes no API call, costs nothing)
@@ -468,7 +468,7 @@ Run `secrun python check_setup.py` first; it catches most problems. Then, by sym
 
 | What you see | What it means / the fix |
 |--------------|-------------------------|
-| `PROVIDER=... needs ... in the environment` | Set `PROVIDER` in `.env`, then load the key(s) from your keychain by running under `secrun`. See [SECRETS.md](../SECRETS.md). |
+| `PROVIDER=... needs ... in the environment` | Set `PROVIDER` in `.env`, then load the key(s) from your keychain by running under `secrun`. See [SECRETS.md](../docs/SECRETS.md). |
 | `ModuleNotFoundError` (openai / anthropic / voyageai / rich) | Dependencies aren't installed or the venv isn't active. `source .venv/bin/activate` then `pip install -r requirements.txt`. |
 | `AuthenticationError` / 401 | A key is present but wrong. For `claude`, remember you need **two** keys (Anthropic *and* Voyage). |
 | Answers look wrong or "I don't know" for facts that ARE in the corpus | A retrieval problem, not a model problem. Raise `-k`, try `--rebuild` after editing the corpus, or check Section 10's metrics. |
