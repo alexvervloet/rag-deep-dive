@@ -266,7 +266,7 @@ because real embeddings cluster.
 
 When brute force is fast enough, which, for the few thousand chunks in a normal
 corpus, it is. ANN adds a recall risk and a dial to tune (against an eval, §10) in
-exchange for speed you may not need. It earns its place at millions of vectors, not
+exchange for speed you may not need. It pays for itself at millions of vectors, not
 before. Reach for `store.py` first.
 </details>
 
@@ -335,7 +335,7 @@ places, so cosine similarity between their vectors measures nothing; a stored
 vector is only meaningful next to vectors from the same model. Often the schema
 catches it first, since a `vector(1536)` column cannot physically hold a
 1024-dimensional vector, but do not rely on that: when two models happen to share
-a width, the widths match and the answers are quietly nonsense. Changing the
+a width, the widths match and the answers are nonsense that looks fine. Changing the
 embedding model is a migration with a re-embedding bill attached.
 </details>
 
