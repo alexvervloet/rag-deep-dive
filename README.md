@@ -365,6 +365,7 @@ index forces on you:
 | Nothing changed since last run | Rebuild everything, or trust a cache with no idea what is in the corpus | Compare a content hash per document; embed nothing |
 | One document edited | Re-embed the whole corpus | Re-embed that document; replace its chunks in one transaction |
 | A document deleted from the corpus | Nothing, unless you remember to rebuild | Delete the row; `ON DELETE CASCADE` takes its vectors with it |
+| A document *emptied* upstream | Nothing, same as above | Replaced by nothing: its chunks go and its hash advances, so the next sync reads "unchanged" rather than re-reporting the edit forever |
 | Embedding model changed | Silently compare vectors that mean different things, unless the cache header catches it | Detect it against the recorded model id, and migrate: the vector column has a fixed width |
 | Corpus outgrows a brute-force scan | Nothing on offer | `CREATE INDEX ... USING hnsw`, built after loading |
 
@@ -377,9 +378,9 @@ pip install -r requirements-postgres.txt      # psycopg, the Postgres driver
 secrun python examples/16_pgvector_lifecycle.py
 ```
 
-The example runs the six events above in order and prints what each one cost, so
-the incremental-sync argument arrives as numbers rather than a claim: a second
-sync of an unchanged corpus embeds **0 chunks**, and editing one document of four
+The example runs those events in order and prints what each one cost, so the
+incremental-sync argument arrives as numbers rather than a claim: a second sync
+of an unchanged corpus embeds **0 chunks**, and editing one document of four
 embeds **3 of 12**.
 
 The capstone speaks to it too, with the same retrieval code and a different store:
@@ -397,12 +398,14 @@ operational upgrade, not a different idea.**
 
 Three things the example is deliberately honest about:
 
-- **The planner ignores your index, and it is right to.** With a few hundred
-  chunks, Postgres chooses a sequential scan over the HNSW index, because
-  scanning a few hundred rows beats walking a graph. The example prints both
+- **The planner ignores your index, and it is right to.** This corpus is a
+  dozen chunks, and Postgres chooses a sequential scan over the HNSW index,
+  because reading a dozen rows beats walking a graph. The example prints both
   plans, forcing the index with `enable_seqscan = off` to show what it returns.
-  An index whose recall you have not measured at your own scale is a guess; §15
-  is the same dial, turned by hand.
+  An index whose recall you have not measured at your own scale is a guess; the
+  approximate-search example under
+  [Going further](#going-further-six-more-retrieval-upgrades) is the same dial,
+  turned by hand.
 - **An index is not free before it pays.** HNSW stores its own copy of every
   vector and slows every insert. Build it when brute force is measurably too
   slow, not in advance.
@@ -411,6 +414,20 @@ Three things the example is deliberately honest about:
   better: no service to run, no migration to write, no schema to keep in step
   with your embedding model. What the database buys you is the lifecycle, so
   reach for it when documents *change*, not when they are merely numerous.
+
+The lifecycle claims above are asserted rather than promised. With the service
+running:
+
+```bash
+RAG_TEST_DATABASE_URL=postgresql://rag:rag_local_only@localhost:54331/rag \
+  python -m unittest tests.test_pgstore -v
+```
+
+Those tests make no API calls (the embedder is a deterministic stand-in, because
+the lifecycle does not care what the numbers are), and most of them assert that
+something is *absent* after a sync: no stale chunk, no half-written index, no
+document quietly dropped. That is the shape retrieval bugs take. They do not
+raise; they answer plausibly, citing a page that no longer exists.
 
 Stop the service when you are finished; the data survives in a named volume.
 
@@ -457,8 +474,9 @@ scale and robustness on top of these same ideas:
 
 - **A real vector database**: pgvector, Pinecone, Weaviate, or a local FAISS /
   hnswlib index, for fast approximate search over millions of vectors instead of
-  our brute-force scan. §15 builds a toy IVF index by hand so you can see the
-  recall-for-speed dial these tools all expose, and **§12 runs the whole pipeline
+  our brute-force scan. The approximate-search example above builds a toy IVF
+  index by hand so you can see the recall-for-speed dial these tools all expose,
+  and **§12 runs the whole pipeline
   against a real pgvector database**, where the interesting part turns out to be
   the index lifecycle rather than the search itself.
 - **Smarter chunking**: token-based sizing, structure-aware splitting, and
@@ -556,7 +574,7 @@ Run `secrun python check_setup.py` first; it catches most problems. Then, by sym
 | Switched provider and results went haywire | Stale index. The capstone auto-rebuilds, but if you cached elsewhere, delete `.rag_index.json`; vectors aren't comparable across embedding models. |
 | `Could not connect to Postgres at ...` | The optional §12 database isn't running. `docker compose up -d`, or drop `--store pg` to use the JSON cache. |
 | `The Postgres path needs psycopg` | `pip install -r requirements-postgres.txt`. Only the §12 path needs it. |
-| `expected 1536 dimensions, not 1024` from Postgres | You switched embedding models against an existing index. `sync()` handles this itself; if you hit it from your own code, the column width is part of the schema. |
+| `this query vector has N dimensions and the index holds M` | You switched embedding models. `sync()` rebuilds the index when the model *id* changes; this error is the backstop for when it does not, such as OpenAI's `dimensions=` parameter narrowing `text-embedding-3-small` under the same name. Re-index (`--rebuild`) to clear it. |
 | `SyntaxError` / odd type errors on startup | You're likely on Python 3.9 or older; this repo needs 3.10+. `check_setup.py` confirms your version. |
 
 Still stuck? Every file is small and self-contained. Open it, read the docstring
