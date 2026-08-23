@@ -1,0 +1,8 @@
+# Extra dependency for the optional Postgres/pgvector section (README §12).
+# Install it on top of requirements.txt only if you want to run that path:
+#
+#   pip install -r requirements-postgres.txt
+#
+# psycopg 3 is the current PostgreSQL driver for Python; the [binary] extra
+# ships prebuilt wheels so there's nothing to compile.
+psycopg[binary]>=3.2,<4
