@@ -315,8 +315,8 @@ HNSW index exists, and the first plan says `Seq Scan`. Is that a bug?
 
 <details><summary>▸ Answer</summary>
 
-No, it's the planner being right. Scanning a few hundred rows is cheaper than
-walking a graph, so Postgres declines the index; the example has to set
+No, it's the planner being right. Reading the dozen rows in this corpus is
+cheaper than walking a graph, so Postgres declines the index; the example has to set
 `enable_seqscan = off` to make the index run at all. The lesson generalizes past
 Postgres: an index you built is not an index you are using, and an approximate
 index you are using has a recall number you have not measured yet. Check what the
