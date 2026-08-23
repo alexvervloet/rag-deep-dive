@@ -21,6 +21,7 @@ of this file; the *concept* doesn't change.
 import json
 import math
 from dataclasses import dataclass, field
+from typing import Protocol
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -42,6 +43,21 @@ class Record:
     text: str
     vector: list[float]
     metadata: dict = field(default_factory=dict)
+
+
+class SupportsSearch(Protocol):
+    """Anything the pipeline can retrieve from: one method, `search`.
+
+    `VectorStore` below and `PgVectorStore` in [pgstore.py](pgstore.py) both
+    satisfy this without inheriting from anything or knowing the protocol
+    exists. That is the claim of this whole repo stated in the type system: the
+    RAG pipeline does not care whether its vectors live in a Python list or a
+    database, because retrieval is an architecture, not a storage product.
+    """
+
+    def search(
+        self, query_vector: list[float], k: int = 5
+    ) -> list[tuple[float, "Record"]]: ...
 
 
 class VectorStore:

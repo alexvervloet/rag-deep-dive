@@ -36,7 +36,7 @@ from .providers import (
     generate,
     provider_name,
 )
-from .store import VectorStore, cosine_similarity
+from .store import SupportsSearch, VectorStore, cosine_similarity
 
 __all__ = [
     "chunk_text",
@@ -46,6 +46,7 @@ __all__ = [
     "tokenize",
     "load_corpus",
     "VectorStore",
+    "SupportsSearch",
     "PgVectorStore",
     "SyncReport",
     "cosine_similarity",

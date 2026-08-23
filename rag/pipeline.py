@@ -16,7 +16,7 @@ citation discipline is what separates RAG from "the model guessing."
 
 from .chunking import chunk_text
 from .providers import embed, generate
-from .store import Record, VectorStore
+from .store import Record, SupportsSearch, VectorStore
 
 # The grounding instruction. This is doing a lot of work: it forbids outside
 # knowledge (so wrong-but-confident answers become "I don't know") and asks for
@@ -53,7 +53,7 @@ def index_documents(
     return store
 
 
-def retrieve(store: VectorStore, query: str, k: int = 4) -> list[tuple[float, Record]]:
+def retrieve(store: SupportsSearch, query: str, k: int = 4) -> list[tuple[float, Record]]:
     """Embed the query and return the top-k (score, record) chunks."""
     query_vector = embed([query], input_type="query")[0]
     return store.search(query_vector, k)
@@ -74,7 +74,7 @@ def build_prompt(query: str, hits: list[tuple[float, Record]]) -> str:
 
 
 def answer(
-    store: VectorStore,
+    store: SupportsSearch,
     query: str,
     k: int = 4,
     max_tokens: int = 512,
