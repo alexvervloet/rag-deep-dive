@@ -41,6 +41,21 @@ def provider_name() -> str:
     return os.getenv("PROVIDER", "openai").strip().lower()
 
 
+def embed_model() -> str:
+    """The embedding model id of the active stack.
+
+    Worth having as a first-class value, not a private constant: anything that
+    persists vectors has to record which model made them, because vectors from
+    two different models are not comparable. See `rag/pgstore.py`.
+    """
+    p = provider_name()
+    if p == "openai":
+        return _OPENAI_EMBED
+    if p == "claude":
+        return _VOYAGE_EMBED
+    return f"unknown-{p}"
+
+
 def required_keys() -> list[str]:
     """Environment variables the active stack needs."""
     return _KEYS.get(provider_name(), [])
