@@ -1,37 +1,35 @@
 # RAG: A Guided Deep Dive
 
-A hands-on playground for learning **retrieval-augmented generation (RAG)** from
-the ground up. You'll build a real "chat with your documents" tool, and along the
-way understand every moving part by building each one from scratch: chunking,
-embeddings, a vector store, retrieval, hybrid search, reranking, grounding with
-citations, and evaluation. No LangChain, no LlamaIndex, no vector database, just
-enough code to see how it works.
+A hands-on playground for learning **retrieval-augmented generation (RAG)** from the
+ground up. You'll build a real "chat with your documents" tool, and understand every
+moving part by building each one from scratch. Chunking, embeddings, a vector store,
+retrieval, hybrid search, reranking, grounding with citations, and evaluation. No
+LangChain, no LlamaIndex, no vector database. Just enough code to see how it works.
 
 This is the fourth of eight core repos in the series. The sibling repos
 ([openai-api-deep-dive](https://github.com/alexvervloet/openai-api-deep-dive),
-[claude-api-deep-dive](https://github.com/alexvervloet/claude-api-deep-dive)) teach the underlying API
-calls: embeddings and chat. This one assumes you can make those calls and asks
-the next question: **how do you get a model to answer accurately from *your*
-documents?**
+[claude-api-deep-dive](https://github.com/alexvervloet/claude-api-deep-dive)) teach the
+underlying API calls, embeddings and chat. This one assumes you can make those calls and
+asks the next question. How do you get a model to answer accurately from your own
+documents?
 
-Like its siblings, it's meant to be walked through, not just read. Each section
-ends with something to run. Do the running; that's where the learning is. And
+Like its siblings, walk through it rather than reading it. Each section ends with
+something to run. Do the running. That is where the learning is. And
 [EXERCISES.md](EXERCISES.md) has a predict-then-run prompt for each section.
 
 ---
 
 ## 0. The one big idea
 
-RAG sounds like a lot of machinery, but it all hangs off a single sentence:
+RAG sounds like a lot of machinery. It all hangs off a single sentence.
 
-> **A model can only answer from what's in its context window. RAG is the
-> discipline of putting the *right* text there.**
+> **A model can only answer from what is in its context window. RAG is the discipline
+> of putting the right text there.**
 
-That's it. Chunking is how you cut documents into put-able pieces. Embeddings and
-the vector store are how you find the right pieces. Hybrid search and reranking
-are how you find them better. Grounding and citations are how you use them
-honestly. Evaluation is how you know it's working. Every section below is a
-variation on that one sentence.
+That's it. Chunking cuts documents into pieces small enough to put there. Embeddings and
+the vector store find the right pieces. Hybrid search and reranking find them better.
+Grounding and citations make you use them honestly. Evaluation tells you it's working.
+Every section below is a variation on that one sentence.
 
 ---
 
@@ -55,90 +53,90 @@ cp .env.example .env
 secrun python check_setup.py       # secrun injects your key so the check can see it
 ```
 
-**RAG is provider-agnostic, so this repo is too.** Pick whichever stack you set up
-in the sibling repos with `PROVIDER` in `.env`:
+RAG is provider-agnostic, so this repo is too. Pick whichever stack you set up in the
+sibling repos with `PROVIDER` in `.env`.
 
 | `PROVIDER` | Embeddings | Chat | Keys needed |
 |------------|-----------|------|-------------|
 | `openai` (default) | OpenAI `text-embedding-3-small` | OpenAI `gpt-5.4-nano` | `OPENAI_API_KEY` |
 | `claude` | Voyage AI `voyage-3.5` | Claude `claude-haiku-4-5` | `ANTHROPIC_API_KEY` + `VOYAGE_API_KEY` |
 
-Every example and the capstone work the same way on either. The only file that
-knows which provider you picked is [rag/providers.py](rag/providers.py). That's
-the whole point: RAG is an architecture, not a provider feature.
+Every example and the capstone work the same way on either. The only file that knows
+which provider you picked is [rag/providers.py](rag/providers.py), and that is the whole
+point. RAG is an architecture rather than a provider feature.
 
-> **You can start before spending much.** Example 02 (chunking) is fully
-> offline, no key and no cost. The rest make small, cheap embedding/chat calls.
-> Nothing needs Docker except the optional database section (§12).
+> **You can start before spending much.** Example 02, chunking, is fully offline with no
+> key and no cost. The rest make small, cheap embedding and chat calls. Nothing needs
+> Docker except the optional database section in §12.
 
 ---
 
-## 2. Prerequisites: embeddings, recapped
+## 2. Embeddings, recapped
 
-RAG is built on one capability from the sibling repos: an **embedding** turns text
-into a vector that captures its meaning, and **cosine similarity** measures how
-close two vectors are (1.0 = same meaning, 0 = unrelated). The magic that makes
-retrieval possible: two texts can match strongly even when they share **no words**.
+RAG is built on one capability from the sibling repos. An **embedding** turns text into a
+vector that captures its meaning, and **cosine similarity** measures how close two
+vectors are, where 1.0 means the same meaning and 0 means unrelated. Here is what makes
+retrieval possible: two texts can match strongly even when they share no words at all.
 
 ```bash
 secrun python examples/01_embeddings_recap.py
 ```
 
-If that's already familiar, skim it and move on. If not, the embeddings examples
-in the sibling repos go slower. Everything else here builds on this one idea.
+If that's already familiar, skim it and move on. If not, the embeddings examples in the
+sibling repos go slower. Everything else here builds on this one idea.
 
 ---
 
-## 3. Chunking: cutting documents into pieces
+## 3. Chunking, or cutting documents into pieces
 
-You don't embed a whole document as one vector. A long page covers many topics,
-and one vector can only point in one averaged direction, matching everything
-vaguely and nothing well. Instead you split documents into **chunks** and embed
-each one, so retrieval can return the specific paragraph that answers a question.
+You don't embed a whole document as one vector. A long page covers many topics, and one
+vector can only point in one averaged direction, matching everything vaguely and nothing
+well. Instead you split documents into **chunks** and embed each one, so retrieval can
+return the specific paragraph that answers a question.
 
 ```bash
 python examples/02_chunking.py        # offline, no key, no cost
 ```
 
-Two knobs, both tradeoffs:
-- **chunk size**: too big and each chunk is unfocused and wastes context space;
-  too small and a chunk may not say enough on its own.
-- **overlap**: chunks share a few words at the seams so an idea split across a
-  boundary isn't lost to both neighbours.
+Two knobs, and both are tradeoffs.
+- **Chunk size.** Too big and each chunk is unfocused and wastes context space. Too
+  small and a chunk may not say enough on its own.
+- **Overlap.** Chunks share a few words at the seams, so an idea split across a boundary
+  isn't lost to both neighbours.
 
-There's no universally correct setting. It depends on your documents and
-questions, which is why Section 6 has you *measure* it. How you cut matters too,
-not just how big: see [rag/chunking.py](rag/chunking.py) for `chunk_text()`
-(sliding window), `chunk_paragraphs()` (split on blank lines), and
-`chunk_markdown_sections()` (split on headings), compared head-to-head in the
-"Chunking strategies" example under [Going further](#going-further-six-more-retrieval-upgrades).
+There is no universally correct setting. It depends on your documents and your
+questions, which is why Section 6 has you measure it. How you cut matters as much as how
+big. See [rag/chunking.py](rag/chunking.py) for `chunk_text()` (sliding window),
+`chunk_paragraphs()` (split on blank lines), and `chunk_markdown_sections()` (split on
+headings), compared head to head in the "Chunking strategies" example under
+[Going further](#going-further-six-more-retrieval-upgrades).
 
 ---
 
-## 4. The vector store: finding the right chunks
+## 4. The vector store, or finding the right chunks
 
-A "vector store" is just a list of `(text, vector)` pairs plus a way to find the
-vectors closest to a query. We build one by hand so there's no mystery: store each
-chunk with its embedding, then for a query, score every chunk by cosine similarity
-and return the top-k.
+A vector store is a list of `(text, vector)` pairs plus a way to find the vectors closest
+to a query. We build one by hand so there is no mystery. Store each chunk with its
+embedding, then for a query, score every chunk by cosine similarity and return the
+top-k.
 
 ```bash
 secrun python examples/03_vector_store.py
 ```
 
-This is the *retrieval* half of RAG: finding the right text, no model answer yet.
-Our [rag/store.py](rag/store.py) does a brute-force O(n) scan, which is instant for
-thousands of chunks and completely transparent. Swapping in an approximate index
-(FAISS) or a hosted vector database (pgvector, Pinecone) for millions of vectors
-is the main thing "production RAG" adds. Same idea, cleverer data structure, and
-§12 does exactly that swap against a real Postgres so you can see what changes
-(the lifecycle) and what does not (the retrieval).
+This is the retrieval half of RAG. Finding the right text, with no model answer yet.
+[rag/store.py](rag/store.py) does a brute-force O(n) scan, which is instant for thousands
+of chunks and completely transparent. Swapping in an approximate index like FAISS, or a
+hosted vector database like pgvector or Pinecone, for millions of vectors is the main
+thing "production RAG" adds. Same idea, cleverer data structure. §12 does exactly that
+swap against a real Postgres, so you can see what changes, which is the lifecycle, and
+what does not, which is the retrieval.
 
 ---
 
-## 5. The RAG pipeline: putting it together
+## 5. The RAG pipeline, put together
 
-Now retrieval meets generation, the actual point of the repo:
+Now retrieval meets generation, which is the actual point of the repo.
 
 ```bash
 secrun python examples/04_rag_pipeline.py
@@ -152,59 +150,58 @@ The flow (see [rag/pipeline.py](rag/pipeline.py)):
 3. `answer()` pastes those chunks into a **grounded prompt**, generates, and hands
    back the answer with its sources.
 
-Two disciplines make a RAG answer trustworthy rather than a guess, both in
-`GROUNDED_SYSTEM`:
-- **Grounding**: the model is told to answer ONLY from the provided context, and
-  to say "I don't know" otherwise. Ask about something not in the corpus and watch
-  it decline instead of hallucinate.
-- **Citations**: the context blocks are numbered, so the model can cite `[2]` and
-  you can check the claim against the real source.
+Two disciplines make a RAG answer trustworthy rather than a guess, and both live in
+`GROUNDED_SYSTEM`.
+- **Grounding.** The model is told to answer only from the provided context and to say
+  "I don't know" otherwise. Ask about something outside the corpus and watch it decline
+  instead of hallucinating.
+- **Citations.** The context blocks are numbered, so the model can cite `[2]` and you
+  can check the claim against the real source.
 
 ---
 
-## 6. Tuning retrieval I: chunk size
+## 6. Tuning retrieval, part one: chunk size
 
-Section 3 showed chunk size changing the *number* of chunks; this shows it
-changing retrieval quality, which is what you actually care about. Same corpus,
-same query, indexed small vs large:
+Section 3 showed chunk size changing the number of chunks. This shows it changing
+retrieval quality, which is what you actually care about. Same corpus, same query,
+indexed small against large.
 
 ```bash
 secrun python examples/05_chunk_size.py
 ```
 
-Small chunks pinpoint the exact sentence but can fragment an answer; large chunks
-carry more context per hit but less precisely. The lesson isn't "small good". It's
-that this is an empirical knob you tune by looking at results (and, in Section 10,
-at numbers).
+Small chunks pinpoint the exact sentence and can fragment an answer. Large chunks carry
+more context per hit, less precisely. The lesson is not "small is good". It is that this
+is an empirical knob you tune by looking at results, and in Section 10, at numbers.
 
 ---
 
-## 7. Keyword search: the other half of retrieval
+## 7. Keyword search, the other half of retrieval
 
-The vector store (Section 4) matches on *meaning*. Its opposite number is
-**keyword** (lexical) search, which matches on the actual words: exactly what
-embeddings are worst at, like product names, error codes, and IDs. We build it
-from scratch with **BM25**, the classic search-engine ranking function, which
-weighs each query word by how rare it is (a shared "the" is worthless; a shared
-"NN-413" is decisive) and normalizes for chunk length. No model, no embeddings,
-just arithmetic over word counts, so it's **free and offline**.
+The vector store in Section 4 matches on meaning. Its opposite number is **keyword**
+(lexical) search, which matches on the actual words. That is exactly what embeddings are
+worst at: product names, error codes, IDs. We build it from scratch with **BM25**, the
+classic search-engine ranking function, which weighs each query word by how rare it is (a
+shared "the" is worthless, a shared "NN-413" is decisive) and normalizes for chunk
+length. No model, no embeddings, just arithmetic over word counts, so it is free and
+offline.
 
 ```bash
 python examples/06_keyword_search.py   # offline, no key, no cost
 ```
 
-The example runs an exact-code query (keyword nails it) against a paraphrase query
-(keyword whiffs, because the answer uses different words than the question). That
-second failure is the mirror image of vector search's, and the whole reason the
-next section blends the two. See [rag/keyword.py](rag/keyword.py) for the BM25 code.
+The example runs an exact-code query, which keyword search nails, against a paraphrase
+query, which it whiffs because the answer uses different words than the question. That
+second failure is the mirror image of vector search's, and the whole reason the next
+section blends the two. See [rag/keyword.py](rag/keyword.py) for the BM25 code.
 
 ---
 
-## 8. Tuning retrieval II: hybrid search
+## 8. Tuning retrieval, part two: hybrid search
 
-You've now built both halves of retrieval: vector search by meaning (Section 4)
-and keyword search by words (Section 7). Each has a blind spot the other covers.
-**Hybrid retrieval** runs both and blends the scores, getting each one's strength.
+You've now built both halves of retrieval. Vector search by meaning in Section 4, and
+keyword search by words in Section 7. Each has a blind spot the other covers.
+**Hybrid retrieval** runs both and blends the scores, taking each one's strength.
 
 ```bash
 secrun python examples/07_hybrid_retrieval.py
@@ -216,103 +213,104 @@ retrieval is hybrid.
 
 ---
 
-## 9. Tuning retrieval III: reranking
+## 9. Tuning retrieval, part three: reranking
 
-Vector search is cheap but approximate; the best chunk isn't always #1. A two-stage
-pipeline fixes this: **retrieve** a generous handful cheaply, then **rerank** those
-few with a slower, smarter scorer and keep the best.
+Vector search is cheap and approximate, and the best chunk isn't always #1. A two-stage
+pipeline fixes that. Retrieve a generous handful cheaply, then rerank those few with a
+slower, smarter scorer and keep the best.
 
 ```bash
 secrun python examples/08_reranking.py
 ```
 
-Production systems use a dedicated **cross-encoder reranker** (Voyage and Cohere
-both offer rerank endpoints). The example demonstrates the same pattern with a
-tool you already have, asking the model to pick the most relevant passages, so
-you see the shape without a new dependency.
+Production systems use a dedicated cross-encoder reranker, and Voyage and Cohere both
+offer rerank endpoints. The example demonstrates the same pattern with a tool you already
+have, asking the model to pick the most relevant passages, so you see the shape without a
+new dependency.
 
 ---
 
-## 10. Evaluation: is it actually working?
+## 10. Evaluation, or is it actually working?
 
-Every knob above is a guess until you measure. RAG fails in two independent places,
-so you evaluate both:
+Every knob above is a guess until you measure. RAG fails in two independent places, so
+you evaluate both.
 
 ```bash
 secrun python examples/09_evaluation.py
 ```
 
-- **Retrieval**: did the right chunk come back? `hit rate @ k` (was it in the top
-  k?) and `MRR` (how high?).
-- **Answer**: given good context, was the final answer right?
+- **Retrieval.** Did the right chunk come back? `hit rate @ k` asks whether it was in
+  the top k, and `MRR` asks how high.
+- **Answer.** Given good context, was the final answer right?
 
-The example scores a tiny labelled set and prints all three numbers. Change a knob
-(chunk size, k, hybrid weighting, reranking) and re-run. If a number drops, you
-caught a regression you'd otherwise have shipped. **This is the habit that
-separates a RAG demo from a RAG system.**
+The example scores a tiny labelled set and prints all three numbers. Change a knob (chunk
+size, k, hybrid weighting, reranking) and rerun. If a number drops, you caught a
+regression you would otherwise have shipped. This is the habit that separates a RAG demo
+from a RAG system.
 
 ---
 
 ## Going further: six more retrieval upgrades
 
-Once the core pipeline works and you can measure it (§10), these are the highest-
-leverage upgrades. Each is a small, self-contained example you can run and score.
+Once the core pipeline works and you can measure it (§10), these are the upgrades worth
+the most. Each one is a small, self-contained example you can run and score.
 
-### Query transformation: HyDE and multi-query
-A question and its answer often don't "look alike" in embedding space. Transform the
-query first: draft a hypothetical answer and embed that (**HyDE**), or fan the
-question out into several paraphrases and union the results (**multi-query**). One
-extra LLM call before retrieval, and oblique questions start finding the right chunk.
+### Query transformation with HyDE and multi-query
+A question and its answer often don't look alike in embedding space. Transform the query
+first. Draft a hypothetical answer and embed that (**HyDE**), or fan the question out
+into several paraphrases and union the results (**multi-query**). One extra LLM call
+before retrieval, and oblique questions start finding the right chunk.
 ```bash
 secrun python examples/10_query_transformation.py
 ```
 
 ### Contextual retrieval
-A chunk embedded in isolation loses the words that make it findable ("the limit is
-5 GB", of what?). Prepend a one-sentence, LLM-written context that situates the
-chunk in its document *before embedding*, while still showing the model the clean
-chunk. A cheap, high-leverage win for short, under-specified passages.
+A chunk embedded in isolation loses the words that make it findable. "The limit is 5
+GB", of what? Prepend a one-sentence, LLM-written context that places the chunk in its
+document before embedding, while still showing the model the clean chunk. Cheap, and it
+wins big on short, under-specified passages.
 ```bash
 secrun python examples/11_contextual_retrieval.py
 ```
 
-### Metadata filtering & parent-document retrieval
-Retrieval quality isn't only embeddings. **Metadata filtering** constrains *where*
-you search (category, date, access-level), giving you relevance and security in one
-move. **Parent-document (small-to-big)** embeds small chunks for a precise match but
-returns the larger parent for complete context, resolving the chunk-size tension.
+### Metadata filtering and parent-document retrieval
+Retrieval quality is not only embeddings. **Metadata filtering** constrains where you
+search, by category, date, or access level, which gives you relevance and security in one
+move. **Parent-document retrieval**, also called small-to-big, embeds small chunks for a
+precise match and returns the larger parent for complete context, which resolves the
+chunk-size tension.
 ```bash
 secrun python examples/12_metadata_and_parent.py
 ```
 
-### Chunking strategies: fixed-size vs structure-aware
-A fixed-size word window cuts wherever the count runs out, sometimes mid-topic,
-gluing the tail of one section onto the head of the next (exactly the merged chunk
-that tripped up §8's hybrid search). Splitting on the document's own headings instead
-gives one topic per chunk and a heading you can cite. The honest limit: it fixes
-*structure*, not the vocabulary gap that query transformation handles.
+### Chunking strategies, fixed-size against structure-aware
+A fixed-size word window cuts wherever the count runs out, sometimes mid-topic, gluing
+the tail of one section onto the head of the next. That is exactly the merged chunk that
+tripped up §8's hybrid search. Splitting on the document's own headings instead gives one
+topic per chunk and a heading you can cite. The honest limit is that it fixes structure
+and does nothing about the vocabulary gap that query transformation handles.
 ```bash
 secrun python examples/13_chunking_strategies.py
 ```
 
-### Document ingestion: from messy sources to clean chunks
-Real corpora are PDFs and HTML, not tidy Markdown. Parse each format down to clean
-text, apply the heading-aware split from the previous section, attach metadata, and
-tidy whitespace. Ingestion is where retrieval quality is won or lost.
+### Document ingestion, from messy sources to clean chunks
+Real corpora are PDFs and HTML rather than tidy Markdown. Parse each format down to clean
+text, apply the heading-aware split from the previous section, attach metadata, and tidy
+the whitespace. Ingestion is where retrieval quality is won or lost.
 ```bash
 secrun python examples/14_document_ingestion.py
 ```
 
-### Approximate nearest-neighbour: recall for speed
-Our store (§4) does exact brute force: perfect for thousands of chunks, too slow at
-millions. Production then switches to an **approximate** index (FAISS, hnswlib,
-pgvector's IVFFlat/HNSW): bucket the vectors and only scan the buckets nearest the
-query, skipping most of the data. You trade a little **recall** for a large speedup.
-The example builds a tiny IVF index by hand ([rag/ann.py](rag/ann.py)) over synthetic
-clustered vectors and turns the "how many buckets to probe" dial. Scanning ~7% of
-the data recovers ~97% of the exact top-10. Offline, no key. The honest caveat:
-don't reach for ANN until brute force is genuinely too slow, and always tune the dial
-against an eval (§10), never on faith.
+### Approximate nearest-neighbour, trading recall for speed
+The store in §4 does exact brute force. Perfect for thousands of chunks, too slow at
+millions. Production switches to an approximate index (FAISS, hnswlib, pgvector's
+IVFFlat or HNSW) that buckets the vectors and only scans the buckets nearest the query,
+skipping most of the data. You trade a little recall for a large speedup. The example
+builds a tiny IVF index by hand in [rag/ann.py](rag/ann.py) over synthetic clustered
+vectors and turns the "how many buckets to probe" dial. Scanning about 7% of the data
+recovers about 97% of the exact top-10. Offline, no key. The honest caveat: don't reach
+for ANN until brute force is genuinely too slow, and always tune the dial against an
+eval (§10) rather than on faith.
 ```bash
 python examples/15_approximate_index.py       # offline
 ```
@@ -322,8 +320,8 @@ python examples/15_approximate_index.py       # offline
 ## 11. The capstone: `ask_docs.py`
 
 Everything comes together in a real "chat with your docs" tool. Point it at the
-[corpus/](corpus/) folder and ask; it indexes once (caching the embeddings to
-disk), retrieves, and answers with `[n]` citations plus a table of sources.
+[corpus/](corpus/) folder and ask. It indexes once, caching the embeddings to disk,
+retrieves, and answers with `[n]` citations plus a table of sources.
 
 ```bash
 # Ask the built-in demo question:
@@ -339,22 +337,21 @@ secrun python hands_on/ask_docs.py "How is my data protected?" -k 6 --show-conte
 secrun python hands_on/ask_docs.py "What plans are there?" --rebuild --chunk-size 80
 ```
 
-Read the source in [hands_on/ask_docs.py](hands_on/ask_docs.py): the index is
-cached in `.rag_index.json` and rebuilt automatically when the provider or chunk
-settings change (vectors from one embedding model are meaningless to another).
-**Suggested exercise:** drop your own notes or docs into `corpus/`, run with
-`--rebuild`, and ask. When it answers something only your documents know, with a
-citation you can check, RAG has clicked.
+Read the source in [hands_on/ask_docs.py](hands_on/ask_docs.py). The index is cached in
+`.rag_index.json` and rebuilt automatically when the provider or the chunk settings
+change, since vectors from one embedding model are meaningless to another. **Suggested
+exercise:** drop your own notes or docs into `corpus/`, run with `--rebuild`, and ask.
+When it answers something only your documents know, with a citation you can check, RAG
+has clicked.
 
 ---
 
 ## 12. A real vector store: Postgres + pgvector
 
-Everything so far keeps the index in memory and caches it to `.rag_index.json`.
-That is the right shape for learning retrieval, and it hides the half of the job
-that takes the time in production. A cache file has exactly one verb, *rebuild
-everything*, and rebuilding everything means re-embedding everything, which is
-the one step that costs money.
+Everything so far keeps the index in memory and caches it to `.rag_index.json`. That is
+the right shape for learning retrieval, and it hides the half of the job that takes the
+time in production. A cache file has exactly one verb, rebuild everything, and rebuilding
+everything means re-embedding everything, which is the one step that costs money.
 
 This section runs the same pipeline against **Postgres with the pgvector
 extension** so the index outlives the process, and walks the lifecycle a durable
@@ -379,9 +376,8 @@ secrun python examples/16_pgvector_lifecycle.py
 ```
 
 The example runs those events in order and prints what each one cost, so the
-incremental-sync argument arrives as numbers rather than a claim: a second sync
-of an unchanged corpus embeds **0 chunks**, and editing one document of four
-embeds **3 of 12**.
+incremental-sync argument arrives as numbers rather than a claim. A second sync of an
+unchanged corpus embeds 0 chunks. Editing one document of four embeds 3 of 12.
 
 The capstone speaks to it too, with the same retrieval code and a different store:
 
@@ -391,12 +387,12 @@ secrun python hands_on/ask_docs.py --store pg --rebuild        # start the index
 ```
 
 Read [rag/pgstore.py](rag/pgstore.py) next to [rag/store.py](rag/store.py). The
-retrieval maths is unchanged: `<=>` is pgvector's cosine distance operator, so
-`1 - (embedding <=> query)` is the same cosine similarity `store.py` computes by
-hand, and `pipeline.py` cannot tell the two stores apart. **The database is an
-operational upgrade, not a different idea.**
+retrieval maths is unchanged. `<=>` is pgvector's cosine distance operator, so
+`1 - (embedding <=> query)` is the same cosine similarity `store.py` computes by hand,
+and `pipeline.py` cannot tell the two stores apart. The database is an operational
+upgrade rather than a different idea.
 
-Three things the example is deliberately honest about:
+Three things the example is deliberately honest about.
 
 - **The planner ignores your index, and it is right to.** This corpus is a
   dozen chunks, and Postgres chooses a sequential scan over the HNSW index,
@@ -423,11 +419,11 @@ RAG_TEST_DATABASE_URL=postgresql://rag:rag_local_only@localhost:54331/rag \
   python -m unittest tests.test_pgstore -v
 ```
 
-Those tests make no API calls (the embedder is a deterministic stand-in, because
-the lifecycle does not care what the numbers are), and most of them assert that
-something is *absent* after a sync: no stale chunk, no half-written index, no
-document quietly dropped. That is the shape retrieval bugs take. They do not
-raise; they answer plausibly, citing a page that no longer exists.
+Those tests make no API calls, because the embedder is a deterministic stand-in and the
+lifecycle does not care what the numbers are. Most of them assert that something is
+absent after a sync: no stale chunk, no half-written index, no document dropped without a
+word. That is the shape retrieval bugs take. They do not raise. They answer plausibly,
+citing a page that no longer exists.
 
 Stop the service when you are finished; the data survives in a named volume.
 
@@ -439,11 +435,11 @@ docker compose down
 
 ## RAG, fine-tuning, or something else?
 
-RAG is the right tool for a specific problem: the model lacks **knowledge** it
-needs right now. It's not the only tool, and reaching for it reflexively is a
-common mistake. The honest framing comes straight from this repo's one big idea.
-RAG changes *what's in the context window*; fine-tuning changes *how the model
-behaves by default*. Different problems.
+RAG is the right tool for one specific problem: the model lacks knowledge it needs right
+now. It is not the only tool, and reaching for it reflexively is a common mistake. The
+honest framing comes straight from this repo's one big idea. RAG changes what is in the
+context window. Fine-tuning changes how the model behaves by default. Different
+problems.
 
 | What you actually need | Reach for | Why |
 |------------------------|-----------|-----|
@@ -453,53 +449,53 @@ behaves by default*. Different problems.
 | The model must **act** or fetch live data | **Tools / agents** | The gap is *capability*, not knowledge. See the [agents repo](https://github.com/alexvervloet/agents-deep-dive) |
 | Lower **latency/cost** on a fixed, high-volume task | **Fine-tune a smaller model** | Distill known-good behavior into a cheaper model |
 
-They're complementary, not either/or: a common production shape is **fine-tune for
-format, RAG for facts**. Train the model to always answer in your house style, and
+They complement each other rather than competing. A common production shape is fine-tune
+for format, RAG for facts. Train the model to always answer in your house style, and
 retrieve the facts it cites.
 
-Two rules of thumb. **Don't fine-tune first.** It's the slow, expensive,
-provider-specific option, and it can't add knowledge that changes. Exhaust
-prompting, better context, and RAG before you reach for it. And **don't decide by
-vibes.** The only way to know whether fine-tuning beat your RAG baseline (or made
-things worse) is to measure both on the same gold set. That's what the
-[evals repo](https://github.com/alexvervloet/evals-deep-dive) is for; the evaluation in
-Section 10 is the same method, pointed at a different decision.
+Two rules of thumb. Don't fine-tune first. It is the slow, expensive, provider-specific
+option, and it cannot add knowledge that changes. Exhaust prompting, better context, and
+RAG before you reach for it. And don't decide by vibes. The only way to know whether
+fine-tuning beat your RAG baseline, or made things worse, is to measure both on the same
+gold set. That is what the [evals repo](https://github.com/alexvervloet/evals-deep-dive)
+is for, and the evaluation in Section 10 is the same method pointed at a different
+decision.
 
 ---
 
 ## Where to go next
 
-You've built a complete small RAG system. The road to production is mostly about
-scale and robustness on top of these same ideas:
+You've built a complete small RAG system. The road to production is mostly scale and
+robustness on top of these same ideas.
 
-- **A real vector database**: pgvector, Pinecone, Weaviate, or a local FAISS /
+- **A real vector database.** pgvector, Pinecone, Weaviate, or a local FAISS /
   hnswlib index, for fast approximate search over millions of vectors instead of
   our brute-force scan. The approximate-search example above builds a toy IVF
   index by hand so you can see the recall-for-speed dial these tools all expose,
   and **§12 runs the whole pipeline
   against a real pgvector database**, where the interesting part turns out to be
   the index lifecycle rather than the search itself.
-- **Smarter chunking**: token-based sizing, structure-aware splitting, and
+- **Smarter chunking.** Token-based sizing, structure-aware splitting, and
   attaching metadata (titles, dates, sections) for filtering.
-- **Dedicated rerankers**: cross-encoder rerank endpoints (Voyage, Cohere) in
+- **Dedicated rerankers.** Cross-encoder rerank endpoints (Voyage, Cohere) in
   place of the LLM reranker pattern in Section 9.
-- **Query transformation**: rewriting or expanding the user's question, or
+- **Query transformation.** Rewriting or expanding the user's question, or
   generating multiple sub-queries, before retrieval.
-- **Serious evaluation**: bigger labelled sets, LLM-as-judge for faithfulness,
+- **Serious evaluation.** Bigger labelled sets, LLM-as-judge for faithfulness,
   and frameworks like Ragas; plus tracing what was retrieved on every request.
-- **Agentic RAG**: letting the model decide *when* to retrieve and issue its own
+- **Agentic RAG.** Letting the model decide *when* to retrieve and issue its own
   searches, instead of always retrieving once up front.
 
-Each slots on top of the one idea you started with: put the right text in the
+Every one of these sits on top of the idea you started with. Put the right text in the
 context window.
 
 ---
 
 ## From teaching code to production
 
-The "Where to go next" section above is about scaling RAG itself. This one is
-about the operational layer every RAG system needs once people rely on it. It's
-orthogonal to retrieval quality, and the same for any LLM app:
+The "Where to go next" section above is about scaling RAG itself. This one is about the
+operational layer every RAG system needs once people rely on it. It is independent of
+retrieval quality, and the same for any LLM app.
 
 | This repo's teaching shortcut | In production |
 |-------------------------------|---------------|
@@ -510,12 +506,11 @@ orthogonal to retrieval quality, and the same for any LLM app:
 | The grounding/citation prompt is inline | A **versioned prompt** promoted only past an **eval gate**, so retrieval-prompt changes can't silently regress |
 | Retrieved documents are trusted text | **Guardrails.** Retrieved content is untrusted input and a classic *indirect injection* vector |
 
-These shortcuts are right for learning and wrong for production. All seven
-concerns (observability, cost, reliability, caching, guardrails, prompt
-versioning, and eval gates) are built from scratch and wired into one running
-app in **[Production](https://github.com/alexvervloet/ai-in-production-deep-dive)** (#8 in the
-series). It runs **offline on a mock provider**, so you can see the whole ops
-machinery with no key and no cost.
+All seven concerns (observability, cost, reliability, caching, guardrails, prompt
+versioning, and eval gates) get built from scratch and wired into one running app in
+[Production](https://github.com/alexvervloet/ai-in-production-deep-dive), which is #8 in
+the series. It runs offline on a mock provider, so you can see the whole ops machinery
+with no key and no cost.
 
 ---
 
@@ -584,37 +579,37 @@ at the top, and run it directly.
 
 ## The series
 
-This is one of the standalone, hands-on deep dives into building with LLM APIs: eight core, plus the bonus dives listed below.
-Each one stands on its own, with its own setup, examples, and capstone, and they
-all share the same house style: provider-agnostic, built from scratch (no
-frameworks), offline-first examples, and a real capstone. Do them in any order;
-this sequence builds naturally:
+This is one of the standalone, hands-on deep dives into building with LLM APIs. Eight
+core dives, plus the bonus ones listed below. Each one stands on its own, with its own
+setup, examples, and capstone, and they all share one house style. Provider-agnostic,
+built from scratch with no frameworks, offline-first examples, and a real capstone at
+the end. Do them in any order. This sequence builds naturally.
 
 1. [OpenAI API](https://github.com/alexvervloet/openai-api-deep-dive): the API from zero
 2. [Claude API](https://github.com/alexvervloet/claude-api-deep-dive): the same ideas, the Anthropic way
-3. [Prompt Engineering](https://github.com/alexvervloet/prompt-engineering-deep-dive): shape model behavior with better prompts (zero/few-shot, chain-of-thought, roles)
+3. [Prompt Engineering](https://github.com/alexvervloet/prompt-engineering-deep-dive): shape model behavior with better prompts, using zero-shot and few-shot, chain-of-thought, and roles
 4. [RAG](https://github.com/alexvervloet/rag-deep-dive): answer questions over your own documents
 5. [Evals](https://github.com/alexvervloet/evals-deep-dive): measure whether a change actually helps
 6. [Agents](https://github.com/alexvervloet/agents-deep-dive): give a model tools and a loop so it can act
 7. [Prompt Injection & Guardrails](https://github.com/alexvervloet/prompt-injection-deep-dive): attack and defend all of the above
-8. [Production](https://github.com/alexvervloet/ai-in-production-deep-dive): operate one app end to end: observability, cost, reliability, caching, guardrails, prompt versioning, eval gates
+8. [Production](https://github.com/alexvervloet/ai-in-production-deep-dive): operate one app end to end, across observability, cost, reliability, caching, guardrails, prompt versioning, and eval gates
 
 **Bonus dives**, standalone and slotting in where they're most useful:
 
-- [Context Engineering](https://github.com/alexvervloet/context-engineering-deep-dive): manage what's in the window: memory, compaction, assembly
-- [AI Data Engineering](https://github.com/alexvervloet/ai-data-engineering-deep-dive): the corpus behind the index: versions, lineage, ACLs, deletes
-- [Multimodal](https://github.com/alexvervloet/multimodal-deep-dive): images & audio, not just text
+- [Context Engineering](https://github.com/alexvervloet/context-engineering-deep-dive): manage what's in the window, with memory, compaction, and assembly
+- [AI Data Engineering](https://github.com/alexvervloet/ai-data-engineering-deep-dive): the corpus behind the index, with versions, lineage, ACLs, and deletes
+- [Multimodal](https://github.com/alexvervloet/multimodal-deep-dive): images and audio as well as text
 - [Fine-tuning](https://github.com/alexvervloet/fine-tuning-deep-dive): teach a model new behavior by example
-- [MCP](https://github.com/alexvervloet/mcp-deep-dive): serve tools, data & prompts to any LLM over a standard protocol
+- [MCP](https://github.com/alexvervloet/mcp-deep-dive): serve tools, data, and prompts to any LLM over a standard protocol
 - [Local Models](https://github.com/alexvervloet/local-models-deep-dive): run open-weight models on your own machine
-- [Agent Harnesses](https://github.com/alexvervloet/agent-harness-deep-dive): build on the loop: hooks, permissions, sandboxing, subagents
+- [Agent Harnesses](https://github.com/alexvervloet/agent-harness-deep-dive): build on the loop, adding hooks, permissions, sandboxing, and subagents
 - [Realtime Voice](https://github.com/alexvervloet/realtime-voice-deep-dive): low-latency speech-to-speech agents
-- [Observability](https://github.com/alexvervloet/observability-deep-dive): watch a running app over time: drift, quality, alerting, the flywheel
+- [Observability](https://github.com/alexvervloet/observability-deep-dive): watch a running app over time, covering drift, quality, alerting, and the feedback loop
 - [Architecture](https://github.com/alexvervloet/architecture-deep-dive): the seams between the components, each decision measured rather than asserted
-- [GenAI Security](https://github.com/alexvervloet/genai-security-deep-dive): treat the model as an untrusted principal: identity, supply chain, isolation, budgets, release gates
+- [GenAI Security](https://github.com/alexvervloet/genai-security-deep-dive): treat the model as an untrusted principal, and put identity, supply chain, isolation, budgets, and release gates around it
 - [Inference Platform Engineering](https://github.com/alexvervloet/inference-platform-deep-dive): turn finite GPU memory and a request queue into latency, throughput, and a fleet size you can defend
-- [Testing & Delivery](https://github.com/alexvervloet/testing-and-delivery-deep-dive): decide whether a build has earned promotion: evidence, gates, staged rollout, rollback
-- [Professional Tools](https://github.com/alexvervloet/professional-tools-deep-dive): rebuild each from-scratch primitive with the tool professionals reach for, and measure both
+- [Testing & Delivery](https://github.com/alexvervloet/testing-and-delivery-deep-dive): decide whether a build is fit to promote, using evidence, gates, staged rollout, and rollback
+- [Professional Tools](https://github.com/alexvervloet/professional-tools-deep-dive): rebuild each hand-written piece with the tool professionals reach for, and measure both
 
 And the whole series lands in one codebase in the
 [capstone](https://github.com/alexvervloet/deep-dive-capstone): a codebase Q&A tool
