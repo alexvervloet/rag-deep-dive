@@ -69,6 +69,7 @@ the whole point: RAG is an architecture, not a provider feature.
 
 > **You can start before spending much.** Example 02 (chunking) is fully
 > offline, no key and no cost. The rest make small, cheap embedding/chat calls.
+> Nothing needs Docker except the optional database section (§12).
 
 ---
 
@@ -129,7 +130,9 @@ This is the *retrieval* half of RAG: finding the right text, no model answer yet
 Our [rag/store.py](rag/store.py) does a brute-force O(n) scan, which is instant for
 thousands of chunks and completely transparent. Swapping in an approximate index
 (FAISS) or a hosted vector database (pgvector, Pinecone) for millions of vectors
-is the main thing "production RAG" adds. Same idea, cleverer data structure.
+is the main thing "production RAG" adds. Same idea, cleverer data structure, and
+§12 does exactly that swap against a real Postgres so you can see what changes
+(the lifecycle) and what does not (the retrieval).
 
 ---
 
@@ -345,6 +348,78 @@ citation you can check, RAG has clicked.
 
 ---
 
+## 12. A real vector store: Postgres + pgvector
+
+Everything so far keeps the index in memory and caches it to `.rag_index.json`.
+That is the right shape for learning retrieval, and it hides the half of the job
+that takes the time in production. A cache file has exactly one verb, *rebuild
+everything*, and rebuilding everything means re-embedding everything, which is
+the one step that costs money.
+
+This section runs the same pipeline against **Postgres with the pgvector
+extension** so the index outlives the process, and walks the lifecycle a durable
+index forces on you:
+
+| The lifecycle event | What the JSON cache does | What the database does |
+|---|---|---|
+| Nothing changed since last run | Rebuild everything, or trust a cache with no idea what is in the corpus | Compare a content hash per document; embed nothing |
+| One document edited | Re-embed the whole corpus | Re-embed that document; replace its chunks in one transaction |
+| A document deleted from the corpus | Nothing, unless you remember to rebuild | Delete the row; `ON DELETE CASCADE` takes its vectors with it |
+| Embedding model changed | Silently compare vectors that mean different things, unless the cache header catches it | Detect it against the recorded model id, and migrate: the vector column has a fixed width |
+| Corpus outgrows a brute-force scan | Nothing on offer | `CREATE INDEX ... USING hnsw`, built after loading |
+
+Two commands and a few cents of embeddings:
+
+```bash
+docker compose up -d                          # pinned pgvector 0.8.6 on Postgres 18
+pip install -r requirements-postgres.txt      # psycopg, the Postgres driver
+
+secrun python examples/16_pgvector_lifecycle.py
+```
+
+The example runs the six events above in order and prints what each one cost, so
+the incremental-sync argument arrives as numbers rather than a claim: a second
+sync of an unchanged corpus embeds **0 chunks**, and editing one document of four
+embeds **3 of 12**.
+
+The capstone speaks to it too, with the same retrieval code and a different store:
+
+```bash
+secrun python hands_on/ask_docs.py --store pg
+secrun python hands_on/ask_docs.py --store pg --rebuild        # start the index over
+```
+
+Read [rag/pgstore.py](rag/pgstore.py) next to [rag/store.py](rag/store.py). The
+retrieval maths is unchanged: `<=>` is pgvector's cosine distance operator, so
+`1 - (embedding <=> query)` is the same cosine similarity `store.py` computes by
+hand, and `pipeline.py` cannot tell the two stores apart. **The database is an
+operational upgrade, not a different idea.**
+
+Three things the example is deliberately honest about:
+
+- **The planner ignores your index, and it is right to.** With a few hundred
+  chunks, Postgres chooses a sequential scan over the HNSW index, because
+  scanning a few hundred rows beats walking a graph. The example prints both
+  plans, forcing the index with `enable_seqscan = off` to show what it returns.
+  An index whose recall you have not measured at your own scale is a guess; §15
+  is the same dial, turned by hand.
+- **An index is not free before it pays.** HNSW stores its own copy of every
+  vector and slows every insert. Build it when brute force is measurably too
+  slow, not in advance.
+- **A database is not automatically the right answer.** For a corpus of a few
+  thousand chunks on one machine, `store.py` plus a cache file is genuinely
+  better: no service to run, no migration to write, no schema to keep in step
+  with your embedding model. What the database buys you is the lifecycle, so
+  reach for it when documents *change*, not when they are merely numerous.
+
+Stop the service when you are finished; the data survives in a named volume.
+
+```bash
+docker compose down
+```
+
+---
+
 ## RAG, fine-tuning, or something else?
 
 RAG is the right tool for a specific problem: the model lacks **knowledge** it
@@ -383,7 +458,9 @@ scale and robustness on top of these same ideas:
 - **A real vector database**: pgvector, Pinecone, Weaviate, or a local FAISS /
   hnswlib index, for fast approximate search over millions of vectors instead of
   our brute-force scan. §15 builds a toy IVF index by hand so you can see the
-  recall-for-speed dial these tools all expose; a real one is far more optimized.
+  recall-for-speed dial these tools all expose, and **§12 runs the whole pipeline
+  against a real pgvector database**, where the interesting part turns out to be
+  the index lifecycle rather than the search itself.
 - **Smarter chunking**: token-based sizing, structure-aware splitting, and
   attaching metadata (titles, dates, sections) for filtering.
 - **Dedicated rerankers**: cross-encoder rerank endpoints (Voyage, Cohere) in
@@ -434,6 +511,7 @@ rag/                        ← the from-scratch library (read it!)
   providers.py              ← the ONLY provider-specific file: embed() + generate()
   chunking.py               ← split documents into chunks
   store.py                  ← in-memory vector store + cosine search
+  pgstore.py                ← the same store in Postgres/pgvector: the index lifecycle
   ann.py                    ← a from-scratch approximate (IVF) index: recall-for-speed
   keyword.py                ← keyword search (BM25), the lexical counterpart
   loader.py                 ← read a folder of docs into (name, text)
@@ -458,6 +536,9 @@ examples/
   13_chunking_strategies.py ← fixed-size vs heading-aware chunking (partly offline)
   14_document_ingestion.py  ← HTML/PDF parsing into clean, structured chunks (partly offline)
   15_approximate_index.py   ← approximate (IVF) search: recall-for-speed tradeoff (offline, no key)
+  16_pgvector_lifecycle.py  ← create, re-sync, delete, index, migrate: a real database
+compose.yaml                ← pinned local pgvector service for §12
+requirements-postgres.txt   ← psycopg, needed only for §12
 ```
 
 ---
@@ -473,6 +554,9 @@ Run `secrun python check_setup.py` first; it catches most problems. Then, by sym
 | `AuthenticationError` / 401 | A key is present but wrong. For `claude`, remember you need **two** keys (Anthropic *and* Voyage). |
 | Answers look wrong or "I don't know" for facts that ARE in the corpus | A retrieval problem, not a model problem. Raise `-k`, try `--rebuild` after editing the corpus, or check Section 10's metrics. |
 | Switched provider and results went haywire | Stale index. The capstone auto-rebuilds, but if you cached elsewhere, delete `.rag_index.json`; vectors aren't comparable across embedding models. |
+| `Could not connect to Postgres at ...` | The optional §12 database isn't running. `docker compose up -d`, or drop `--store pg` to use the JSON cache. |
+| `The Postgres path needs psycopg` | `pip install -r requirements-postgres.txt`. Only the §12 path needs it. |
+| `expected 1536 dimensions, not 1024` from Postgres | You switched embedding models against an existing index. `sync()` handles this itself; if you hit it from your own code, the column width is part of the schema. |
 | `SyntaxError` / odd type errors on startup | You're likely on Python 3.9 or older; this repo needs 3.10+. `check_setup.py` confirms your version. |
 
 Still stuck? Every file is small and self-contained. Open it, read the docstring
