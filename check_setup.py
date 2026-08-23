@@ -118,6 +118,22 @@ def check_dependencies(provider):
     return not missing
 
 
+def check_postgres_path():
+    """Report the optional Postgres/pgvector path (README section 12).
+
+    Deliberately never fails the check. Everything in the repo runs without a
+    database; this section is an extra, so a missing driver is information, not
+    a problem to fix.
+    """
+    print("\nOptional: Postgres/pgvector (README section 12)")
+    if importlib.util.find_spec("psycopg") is None:
+        warn("psycopg not installed. Only needed for the database section.")
+        print("    Enable it with:  pip install -r requirements-postgres.txt")
+        return
+    ok("psycopg installed.")
+    print("    Start the local database with:  docker compose up -d")
+
+
 def check_keys(env, provider):
     print("\nAPI key(s)")
     if env is None:
@@ -148,6 +164,7 @@ def main():
         return 1
     deps = check_dependencies(provider)
     keys = check_keys(env, provider)
+    check_postgres_path()
 
     print()
     if py and deps and keys:
