@@ -293,6 +293,54 @@ match the right sources? This is how you audit a RAG system for trust.
 
 ---
 
+## Section 12: a real vector store (Postgres + pgvector)
+
+**Predict.** You run `secrun python examples/16_pgvector_lifecycle.py`. It syncs a
+four-document corpus, then syncs the *identical* corpus again, then syncs it once
+more with a single document edited. How many chunks does each of those three syncs
+embed?
+
+<details><summary>▸ Answer</summary>
+
+12, then 0, then 3. The first sync is a cold start. The second embeds nothing at
+all: each document's content hash matches what is stored, so there is no work to
+do. The third re-embeds only the edited document's three chunks and leaves the
+other nine alone. That gap between "0" and "12" is the entire argument for a real
+store over a cache file, and it is a bill, not an abstraction: on a corpus of
+50,000 pages where one page changed, the cache path pays to embed 50,000 pages.
+</details>
+
+**Do.** Run the example, then look at the two query plans it prints in step 5. The
+HNSW index exists, and the first plan says `Seq Scan`. Is that a bug?
+
+<details><summary>▸ Answer</summary>
+
+No, it's the planner being right. Scanning a few hundred rows is cheaper than
+walking a graph, so Postgres declines the index; the example has to set
+`enable_seqscan = off` to make the index run at all. The lesson generalizes past
+Postgres: an index you built is not an index you are using, and an approximate
+index you are using has a recall number you have not measured yet. Check what the
+database actually does rather than what you meant it to do.
+</details>
+
+**Recall.** The corpus hasn't changed at all, but you've switched from
+`text-embedding-3-small` to `voyage-3.5`. What does the store have to do, and how
+does it know?
+
+<details><summary>▸ Answer</summary>
+
+It has to re-embed everything, and it knows because the model id is stored in the
+index alongside the vectors. Two embedding models put their axes in different
+places, so cosine similarity between their vectors measures nothing; a stored
+vector is only meaningful next to vectors from the same model. Often the schema
+catches it first, since a `vector(1536)` column cannot physically hold a
+1024-dimensional vector, but do not rely on that: when two models happen to share
+a width, the widths match and the answers are quietly nonsense. Changing the
+embedding model is a migration with a re-embedding bill attached.
+</details>
+
+---
+
 ### Where to take it next
 
 Invent your own. Pick a real folder of your own notes or docs, drop them in
