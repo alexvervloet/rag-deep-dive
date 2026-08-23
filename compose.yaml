@@ -1,0 +1,32 @@
+# A local pgvector service for the "real vector database" section of the README.
+#
+# Everything else in this repo runs without it: the default store is the
+# from-scratch one in rag/store.py, cached to .rag_index.json. This service
+# exists so you can see the same RAG pipeline talk to a real database, and watch
+# the index lifecycle (re-index, delete, model change) that a cache file hides.
+#
+# The image is pinned. pgvector versions change index defaults and operator
+# behaviour, and a lesson whose output moves under you is not a lesson.
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg18
+    environment:
+      POSTGRES_DB: rag
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: rag_local_only
+    # Deliberately not 5432: this is a throwaway teaching container and should
+    # never collide with a real Postgres you already run.
+    ports:
+      - "54331:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag -d rag"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    volumes:
+      # Postgres 18 moved its durable layout: mount /var/lib/postgresql, not the
+      # pre-18 /var/lib/postgresql/data.
+      - rag_pg18:/var/lib/postgresql
+
+volumes:
+  rag_pg18:
