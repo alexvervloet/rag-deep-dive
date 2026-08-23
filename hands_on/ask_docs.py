@@ -24,9 +24,18 @@ Examples
   # Re-embed from scratch (after editing corpus/, or to change chunking)
   secrun python hands_on/ask_docs.py "What plans are there?" --rebuild --chunk-size 80
 
+  # Use a real vector database instead of the JSON cache (README §12)
+  docker compose up -d
+  secrun python hands_on/ask_docs.py --store pg
+
 The index is cached in .rag_index.json. It records which provider and chunk
 settings built it, and rebuilds automatically if those change; vectors from one
 embedding model are meaningless to another.
+
+`--store pg` swaps that cache for Postgres/pgvector (see rag/pgstore.py). The
+retrieval is identical, so the interesting part is what the two stores do on the
+SECOND run: the cache is all-or-nothing, while the database re-embeds only the
+documents whose content actually changed and drops the ones you deleted.
 """
 
 import argparse
@@ -96,6 +105,25 @@ def build_or_load_index(chunk_size: int, overlap: int, rebuild: bool):
     return store, True
 
 
+def open_pg_index(dsn: str, chunk_size: int, overlap: int, rebuild: bool):
+    """Return (store, status). Sync the corpus into Postgres, then retrieve from it.
+
+    There is no "load or build" branch here, which is the point. The index lives
+    in the database whether this process runs or not, so the only question at
+    startup is what changed since last time, and `sync()` answers it in one pass.
+    """
+    from rag.pgstore import PgVectorStore
+
+    store = PgVectorStore.connect(dsn)
+    if rebuild:
+        store.drop_all()
+    docs = rag.load_corpus(CORPUS_DIR)
+    if not docs:
+        sys.exit(f"No documents found in {CORPUS_DIR}. Add some .md/.txt files.")
+    report = store.sync(docs, chunk_size=chunk_size, overlap=overlap)
+    return store, report.summary()
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Ask questions over the corpus/ documents, with citations.",
@@ -111,6 +139,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
                    help="Chunk overlap in words (default 20).")
     p.add_argument("--rebuild", action="store_true",
                    help="Re-embed the corpus from scratch instead of using the cache.")
+    p.add_argument("--store", choices=["json", "pg"], default="json",
+                   help="Where the index lives: the .rag_index.json cache (default) "
+                        "or Postgres/pgvector (needs `docker compose up -d`).")
+    p.add_argument("--database-url", default=os.getenv("RAG_DATABASE_URL"),
+                   help="Postgres DSN for --store pg (default: the compose.yaml service).")
     p.add_argument("--show-context", action="store_true",
                    help="Print the full text of each retrieved chunk.")
     return p.parse_args(argv)
@@ -124,9 +157,20 @@ def main(argv: list[str]) -> int:
     console = Console()
     console.print(f"[dim]Provider: {rag.describe()}[/dim]")
 
-    store, built = build_or_load_index(args.chunk_size, args.overlap, args.rebuild)
-    state = "built and cached" if built else "loaded from cache"
-    console.print(f"[dim]Index {state}: {len(store)} chunks.[/dim]\n")
+    if args.store == "pg":
+        from rag.pgstore import DEFAULT_DSN
+
+        dsn = args.database_url or DEFAULT_DSN
+        try:
+            store, state = open_pg_index(dsn, args.chunk_size, args.overlap, args.rebuild)
+        except RuntimeError as exc:
+            sys.exit(str(exc))
+        console.print(f"[dim]Index in {dsn}[/dim]")
+        console.print(f"[dim]Sync: {state}; {len(store)} chunks.[/dim]\n")
+    else:
+        store, built = build_or_load_index(args.chunk_size, args.overlap, args.rebuild)
+        state = "built and cached" if built else "loaded from cache"
+        console.print(f"[dim]Index {state}: {len(store)} chunks.[/dim]\n")
 
     console.print(f"[bold]Q:[/bold] {args.question}\n")
 
