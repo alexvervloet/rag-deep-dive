@@ -106,7 +106,7 @@ def main() -> None:
         "   behind, still retrievable, still citable.\n"
     )
 
-    # --- 4. Delete ---------------------------------------------------------
+    # --- 4. Delete, and its limit case -------------------------------------
     print("4. Remove a document from the corpus")
     without = [(name, text) for name, text in edited if name != "plans-and-billing.md"]
     before = len(store)
@@ -118,6 +118,25 @@ def main() -> None:
         "   delete a page from your docs site, forget to reindex, and the assistant\n"
         "   keeps answering from it, with a citation that 404s.\n"
     )
+
+    print("   And the limit case: a document emptied rather than removed")
+    emptied = [
+        (name, "" if name == "getting-started.md" else text) for name, text in without
+    ]
+    before = len(store)
+    show(store.sync(emptied), "one document is now empty")
+    print(f"  {'':<34} chunks: {before} -> {len(store)}")
+    show(store.sync(emptied), "and again, to prove it stuck")
+    print(
+        "   Emptying a page is deleting it in every way that matters to retrieval, and\n"
+        "   it is the case that gets written wrong, because the tempting shortcut is to\n"
+        "   skip a document that produced no chunks. Skip it and its old chunks stay\n"
+        "   findable, its stored hash never advances, and every later sync cheerfully\n"
+        "   reports the same edit while doing nothing about it. The second sync above\n"
+        "   says 'unchanged', which is the proof it was handled and not merely missed.\n"
+    )
+    # Put the document back, so the rest of the walkthrough has a full corpus.
+    store.sync(without)
 
     # --- 5. The ANN index --------------------------------------------------
     print("5. Build the approximate index")
@@ -139,12 +158,13 @@ def main() -> None:
     same = [r.metadata for _, r in exact] == [r.metadata for _, r in approximate]
     print(f"  {'':<34} exact and approximate top-4 agree: {same}")
     print(
-        "   Read those two plans honestly. On a corpus this small Postgres ignores the\n"
-        "   index and scans, and it is right to: scanning a few hundred rows beats\n"
-        "   walking a graph. Disabling the scan is the only way to see the index run,\n"
+        "   Read those two plans honestly. There are nine rows in this table, so\n"
+        "   Postgres ignores the index and scans, and it is right to: reading nine rows\n"
+        "   beats walking a graph. Disabling the scan is the only way to see it run,\n"
         "   and here it returns the same four chunks, because HNSW recall is near\n"
         "   perfect when the graph holds every vector you own. That agreement is a\n"
-        "   property to MEASURE at your scale (§10, §15), not to assume: the index is\n"
+        "   property to MEASURE at your own scale, with the evaluation example (09) and\n"
+        "   the approximate-search example (15), not one to assume: the index is\n"
         "   approximate by construction, it stores its own copy of every vector, and it\n"
         "   slows every insert. Build it when brute force is measurably too slow.\n"
     )
