@@ -17,9 +17,9 @@ this module implements each one against Postgres with the `pgvector` extension:
   3. **Deletes.** A document removed from the corpus must lose its chunks, or
      retrieval keeps citing a page that no longer exists. Deleting the document
      row cascades to its chunks, so an orphaned vector is not possible.
-  4. **Index maintenance.** The approximate index (§ "Approximate
-     nearest-neighbour") is a real object here: build it after loading, and know
-     that the planner will ignore it when a sequential scan is cheaper.
+  4. **Index maintenance.** The approximate index that `examples/15` builds by
+     hand is a real object here: build it after loading, and know that the
+     planner will ignore it when a sequential scan is cheaper.
   5. **Provenance.** One row records which provider, model, dimensionality, and
      chunk settings built the index, so vectors from a different model are
      detected instead of silently returning nonsense.
@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Sequence
 
 from .chunking import chunk_text
@@ -89,6 +89,11 @@ def _vector_literal(values: Sequence[float]) -> str:
     return "[" + ",".join(repr(float(v)) for v in values) + "]"
 
 
+def _parse_vector(literal: str) -> list[float]:
+    """Read pgvector's text output (`[0.1,0.2]`) back into a list of floats."""
+    return [float(part) for part in literal.strip("[]").split(",") if part]
+
+
 @dataclass
 class IndexSettings:
     """What built the current index. Stored in `rag_index`, one row."""
@@ -114,7 +119,12 @@ class IndexSettings:
             )
         if self.provider != other.provider:
             return f"provider changed: {self.provider} -> {other.provider}"
-        if self.dimensions != other.dimensions:
+        # `other.dimensions <= 0` means "not known yet": width is only knowable
+        # once a vector has come back, so this check runs on the second pass, and
+        # it is not redundant with the model id. OpenAI's `dimensions=` parameter
+        # narrows the output of `text-embedding-3-small` while the model id stays
+        # exactly the same, so the name matches and the vectors do not.
+        if other.dimensions > 0 and self.dimensions != other.dimensions:
             return f"dimensions changed: {self.dimensions} -> {other.dimensions}"
         if (self.chunk_size, self.overlap) != (other.chunk_size, other.overlap):
             return (
@@ -134,13 +144,22 @@ class SyncReport:
     deleted: list[str]
     embedded_chunks: int
     skipped_chunks: int
+    # A full rebuild is not "everything was added": the documents were already
+    # there and are being re-embedded because the rules changed. It gets its own
+    # word so the summary line cannot be read as ordinary incremental work.
+    reindexed: list[str] = field(default_factory=list)
     rebuilt_reason: str | None = None
 
     @property
     def changed(self) -> bool:
-        return bool(self.added or self.updated or self.deleted)
+        return bool(self.added or self.updated or self.deleted or self.reindexed)
 
     def summary(self) -> str:
+        if self.rebuilt_reason:
+            return (
+                f"{len(self.reindexed)} reindexed (full rebuild); "
+                f"embedded {self.embedded_chunks} chunks"
+            )
         parts = [
             f"{len(self.added)} added",
             f"{len(self.updated)} updated",
@@ -212,28 +231,31 @@ class PgVectorStore:
                 cur.execute(statement)
         self.conn.commit()
 
-    def _ensure_chunk_table(self, dimensions: int) -> None:
+    def _create_chunk_table(self, cur: Any, dimensions: int) -> None:
         """Create the chunk table for a specific embedding width.
 
         `vector(1536)` is a typed column like `varchar(20)`: the width is fixed
         at creation. This is the concrete reason an embedding-model change is a
         migration. Nothing here can quietly adapt to a 1024-dimensional vector
         once the column says 1536.
+
+        It takes a cursor rather than opening its own, and it does not commit,
+        because in Postgres `CREATE TABLE` and `DROP TABLE` are transactional
+        like anything else. Rebuilding the table has to be able to roll back
+        together with the rows that were supposed to go in it.
         """
-        with self.conn.cursor() as cur:
-            cur.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS rag_chunks (
-                    source text NOT NULL
-                        REFERENCES rag_documents (source) ON DELETE CASCADE,
-                    ordinal integer NOT NULL,
-                    text text NOT NULL,
-                    embedding vector({int(dimensions)}) NOT NULL,
-                    PRIMARY KEY (source, ordinal)
-                )
-                """
+        cur.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS rag_chunks (
+                source text NOT NULL
+                    REFERENCES rag_documents (source) ON DELETE CASCADE,
+                ordinal integer NOT NULL,
+                text text NOT NULL,
+                embedding vector({int(dimensions)}) NOT NULL,
+                PRIMARY KEY (source, ordinal)
             )
-        self.conn.commit()
+            """
+        )
 
     def _chunk_table_dimensions(self) -> int | None:
         """The width the chunk table was created with, or None if it is absent."""
@@ -263,30 +285,30 @@ class PgVectorStore:
             return None
         return IndexSettings(row[0], row[1], int(row[2]), int(row[3]), int(row[4]))
 
-    def _write_settings(self, settings: IndexSettings) -> None:
-        with self.conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO rag_index
-                    (only_row, provider, embedding_model, dimensions,
-                     chunk_size, overlap, built_at)
-                VALUES (true, %s, %s, %s, %s, %s, now())
-                ON CONFLICT (only_row) DO UPDATE SET
-                    provider = EXCLUDED.provider,
-                    embedding_model = EXCLUDED.embedding_model,
-                    dimensions = EXCLUDED.dimensions,
-                    chunk_size = EXCLUDED.chunk_size,
-                    overlap = EXCLUDED.overlap,
-                    built_at = now()
-                """,
-                (
-                    settings.provider,
-                    settings.embedding_model,
-                    settings.dimensions,
-                    settings.chunk_size,
-                    settings.overlap,
-                ),
-            )
+    def _write_settings(self, cur: Any, settings: IndexSettings) -> None:
+        """Record what built this index, inside the caller's transaction."""
+        cur.execute(
+            """
+            INSERT INTO rag_index
+                (only_row, provider, embedding_model, dimensions,
+                 chunk_size, overlap, built_at)
+            VALUES (true, %s, %s, %s, %s, %s, now())
+            ON CONFLICT (only_row) DO UPDATE SET
+                provider = EXCLUDED.provider,
+                embedding_model = EXCLUDED.embedding_model,
+                dimensions = EXCLUDED.dimensions,
+                chunk_size = EXCLUDED.chunk_size,
+                overlap = EXCLUDED.overlap,
+                built_at = now()
+            """,
+            (
+                settings.provider,
+                settings.embedding_model,
+                settings.dimensions,
+                settings.chunk_size,
+                settings.overlap,
+            ),
+        )
 
     def drop_all(self) -> None:
         """Remove every table this module owns. The reset button for the lesson."""
@@ -321,14 +343,22 @@ class PgVectorStore:
         forty changed, that is the difference between a cent and a dollar, and
         between a second and a minute, every single time you deploy.
 
+        "Make the database match" is meant literally, including the awkward
+        cases. A document whose new content chunks to nothing still replaces
+        what was there, so emptying a page upstream removes its chunks instead
+        of stranding them, and the stored hash advances so the next sync sees an
+        unchanged document rather than re-reporting the same edit forever.
+
         `embed_fn` and `model_name` exist so a lesson (or a test) can stand in a
         different embedding model without an account for one; production code
         passes neither and gets the active provider's.
 
-        Everything that changes is written in **one transaction**. A crash
-        halfway leaves the index as it was, not half-updated: a half-updated
-        index is worse than a stale one, because it retrieves chunks of an old
-        document beside chunks of the new one and cites both.
+        Everything that changes is written in **one transaction**, the table
+        rebuild on a model change included. A crash halfway leaves the index as
+        it was, not half-updated: a half-updated index is worse than a stale
+        one, because it retrieves chunks of an old document beside chunks of the
+        new one and cites both, and because every later sync sees hashes that
+        say there is nothing to do.
         """
         embed_fn = embed_fn or default_embed
         docs = list(docs)
@@ -336,65 +366,87 @@ class PgVectorStore:
         wanted = IndexSettings(
             provider=provider_name(),
             embedding_model=model_name or embed_model(),
-            dimensions=-1,  # filled in once we have seen a vector
+            dimensions=-1,  # not knowable until a vector comes back
             chunk_size=chunk_size,
             overlap=overlap,
         )
         stored = self.settings()
 
-        # A settings change we can see *before* embedding forces a full rebuild:
-        # every stored vector was made by different rules.
-        rebuilt_reason: str | None = None
-        if stored is not None:
-            comparable = IndexSettings(**{**wanted.__dict__, "dimensions": stored.dimensions})
-            rebuilt_reason = stored.conflicts_with(comparable)
+        # First conflict check: everything knowable *before* spending money.
+        rebuilt_reason = stored.conflicts_with(wanted) if stored is not None else None
 
         existing = self._document_hashes()
-        if rebuilt_reason:
-            existing = {}
+        current_sources = {source for source, _ in docs}
 
-        added, updated, unchanged = [], [], []
-        pending: list[tuple[str, int, str]] = []  # (source, ordinal, chunk text)
+        def chunks_of(sources: set[str]) -> list[tuple[str, int, str]]:
+            planned: list[tuple[str, int, str]] = []
+            for source, text in docs:
+                if source not in sources:
+                    continue
+                for ordinal, chunk in enumerate(chunk_text(text, chunk_size, overlap)):
+                    planned.append((source, ordinal, chunk))
+            return planned
+
+        added: list[str] = []
+        updated: list[str] = []
+        unchanged: list[str] = []
         skipped_chunks = 0
 
-        for source, text in docs:
-            digest = content_hash(text)
-            if not rebuilt_reason and existing.get(source) == digest:
-                unchanged.append(source)
-                skipped_chunks += self._chunk_count(source)
-                continue
-            (added if source not in existing else updated).append(source)
-            for ordinal, chunk in enumerate(chunk_text(text, chunk_size, overlap)):
-                pending.append((source, ordinal, chunk))
+        if rebuilt_reason:
+            write = set(current_sources)
+        else:
+            write = set()
+            for source, text in docs:
+                if existing.get(source) == content_hash(text):
+                    unchanged.append(source)
+                    skipped_chunks += self._chunk_count(source)
+                    continue
+                (updated if source in existing else added).append(source)
+                write.add(source)
 
-        current_sources = {source for source, _ in docs}
-        deleted = sorted(set(self._document_hashes()) - current_sources)
-
-        vectors: list[list[float]] = []
-        if pending:
-            # One embedding call for everything that changed, not one per
-            # document: batching is the difference between N round trips and 1.
-            vectors = embed_fn([chunk for _, _, chunk in pending], input_type="document")
+        deleted = [] if rebuilt_reason else sorted(set(existing) - current_sources)
+        pending = chunks_of(write)
+        vectors = self._embed_pending(embed_fn, pending)
+        if vectors:
             wanted.dimensions = len(vectors[0])
         elif stored is not None:
             wanted.dimensions = stored.dimensions
 
-        table_dimensions = self._chunk_table_dimensions()
-        if pending and table_dimensions not in (None, wanted.dimensions):
-            # A vector(1024) value cannot go in a vector(1536) column. The table
-            # is rebuilt, which is exactly what a real migration would do.
-            rebuilt_reason = rebuilt_reason or (
-                f"dimensions changed: {table_dimensions} -> {wanted.dimensions}"
-            )
-            with self.conn.cursor() as cur:
-                cur.execute("DROP TABLE IF EXISTS rag_chunks")
-            self.conn.commit()
-            table_dimensions = None
-        if pending and table_dimensions is None:
-            self._ensure_chunk_table(wanted.dimensions)
+        # Second conflict check, now that the width is known. This is the case
+        # the model id cannot catch: same model, narrower output. If it fires,
+        # the documents we skipped a moment ago are stale too, so they have to be
+        # re-embedded as well. Rebuilding the table while writing only the
+        # documents that happened to change would silently drop the rest.
+        if stored is not None and not rebuilt_reason and wanted.dimensions > 0:
+            rebuilt_reason = stored.conflicts_with(wanted)
+            if rebuilt_reason:
+                remaining = current_sources - write
+                extra = chunks_of(remaining)
+                pending += extra
+                vectors += self._embed_pending(embed_fn, extra)
+                write = set(current_sources)
+                added, updated, unchanged, deleted = [], [], [], []
+                skipped_chunks = 0
+
+        by_source: dict[str, list[tuple[int, str, list[float]]]] = {}
+        for (source, ordinal, chunk), vector in zip(pending, vectors):
+            by_source.setdefault(source, []).append((ordinal, chunk, vector))
 
         try:
             with self.conn.cursor() as cur:
+                table_dimensions = self._chunk_table_dimensions()
+                if (
+                    table_dimensions is not None
+                    and wanted.dimensions > 0
+                    and table_dimensions != wanted.dimensions
+                ):
+                    # A vector(1024) value cannot go in a vector(1536) column, so
+                    # the table is rebuilt: exactly what a real migration does.
+                    cur.execute("DROP TABLE rag_chunks")
+                    table_dimensions = None
+                if table_dimensions is None and wanted.dimensions > 0:
+                    self._create_chunk_table(cur, wanted.dimensions)
+
                 if rebuilt_reason:
                     # `TRUNCATE ... CASCADE` clears the chunk table with it.
                     cur.execute("TRUNCATE rag_documents CASCADE")
@@ -402,13 +454,14 @@ class PgVectorStore:
                     # One statement, and the chunks go too: the foreign key says
                     # ON DELETE CASCADE, so orphaned vectors are unrepresentable.
                     cur.execute("DELETE FROM rag_documents WHERE source = %s", (source,))
-                by_source: dict[str, list[tuple[int, str, list[float]]]] = {}
-                for (source, ordinal, chunk), vector in zip(pending, vectors):
-                    by_source.setdefault(source, []).append((ordinal, chunk, vector))
+
                 for source, text in docs:
-                    rows = by_source.get(source)
-                    if rows is None:
+                    if source not in write:
                         continue
+                    # `rows` is empty for a document that chunked to nothing.
+                    # That is a real state, not a reason to skip: the row still
+                    # has to be written and the old chunks still have to go.
+                    rows = by_source.get(source, [])
                     cur.execute(
                         """
                         INSERT INTO rag_documents (source, content_hash, chunk_count)
@@ -434,15 +487,11 @@ class PgVectorStore:
                         ],
                     )
                 if wanted.dimensions > 0:
-                    self._write_settings(wanted)
+                    self._write_settings(cur, wanted)
             self.conn.commit()
         except Exception:
             self.conn.rollback()
             raise
-
-        if rebuilt_reason:
-            added, updated, unchanged = sorted(current_sources), [], []
-            deleted = []
 
         return SyncReport(
             added=sorted(added),
@@ -450,9 +499,32 @@ class PgVectorStore:
             unchanged=sorted(unchanged),
             deleted=deleted,
             embedded_chunks=len(pending),
-            skipped_chunks=0 if rebuilt_reason else skipped_chunks,
+            skipped_chunks=skipped_chunks,
+            reindexed=sorted(write) if rebuilt_reason else [],
             rebuilt_reason=rebuilt_reason,
         )
+
+    @staticmethod
+    def _embed_pending(
+        embed_fn: Callable[..., list[list[float]]],
+        pending: list[tuple[str, int, str]],
+    ) -> list[list[float]]:
+        """Embed a batch and insist on getting back what we asked for.
+
+        One call for everything that changed, not one per document: batching is
+        the difference between N round trips and 1. The length check matters
+        because the alternative is `zip()` silently truncating, which would drop
+        the tail of a document's chunks and leave an index that looks fine.
+        """
+        if not pending:
+            return []
+        vectors = embed_fn([chunk for _, _, chunk in pending], input_type="document")
+        if len(vectors) != len(pending):
+            raise ValueError(
+                f"the embedder returned {len(vectors)} vectors for "
+                f"{len(pending)} chunks"
+            )
+        return vectors
 
     def delete_document(self, source: str) -> int:
         """Delete one document and its chunks. Returns the chunks removed."""
@@ -469,6 +541,7 @@ class PgVectorStore:
         query_vector: list[float],
         k: int = 5,
         force_index: bool = False,
+        include_vectors: bool = False,
     ) -> list[tuple[float, Record]]:
         """Top-k by cosine similarity: the same contract as `VectorStore.search`.
 
@@ -484,15 +557,36 @@ class PgVectorStore:
         which is the only way to see what the approximate index actually returns
         on a small corpus. Use it to *measure* the index, never in production: a
         planner overruled by hand is a bug waiting for the data to grow.
+
+        `include_vectors=True` reads the stored embedding back into each Record.
+        It is off by default because you almost never want it (1536 floats is
+        about 6 KB per chunk, and ranking already happened in the database), but
+        the in-memory store fills that field in, so anything reading `.vector`,
+        like the hybrid-search and metadata examples, needs a way to get it.
         """
-        if self._chunk_table_dimensions() is None:
+        stored_dimensions = self._chunk_table_dimensions()
+        if stored_dimensions is None:
             return []
+        if len(query_vector) != stored_dimensions:
+            # The last line of defence for a model swap that `sync()` could not
+            # see: same model id, same corpus, narrower vectors (OpenAI's
+            # `dimensions=` does exactly this). Nothing changed, so nothing was
+            # re-embedded, so the mismatch surfaces here on the first query.
+            raise ValueError(
+                f"this query vector has {len(query_vector)} dimensions and the "
+                f"index holds {stored_dimensions}. The embedding model changed "
+                f"under a name the index already knows; re-index with "
+                f"`sync(..., model_name=...)` or `drop_all()` first."
+            )
+        columns = "text, source, ordinal, 1 - (embedding <=> %s::vector) AS score"
+        if include_vectors:
+            columns += ", embedding::text"
         with self.conn.cursor() as cur:
             if force_index:
                 cur.execute("SET LOCAL enable_seqscan = off")
             cur.execute(
-                """
-                SELECT text, source, ordinal, 1 - (embedding <=> %s::vector) AS score
+                f"""
+                SELECT {columns}
                 FROM rag_chunks
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
@@ -503,10 +597,14 @@ class PgVectorStore:
         self.conn.commit()
         return [
             (
-                float(score),
-                Record(text=text, vector=[], metadata={"source": source, "chunk": ordinal}),
+                float(row[3]),
+                Record(
+                    text=row[0],
+                    vector=_parse_vector(row[4]) if include_vectors else [],
+                    metadata={"source": row[1], "chunk": row[2]},
+                ),
             )
-            for text, source, ordinal, score in rows
+            for row in rows
         ]
 
     def explain_search(
@@ -597,8 +695,8 @@ class PgVectorStore:
         """On-disk size of the chunk table and its ANN index, if any.
 
         Vectors are large: 1536 floats is 6 KB per chunk before any index. This
-        is the number people are surprised by, and it is why the ANN index in
-        §15 is not free either, it stores its own copy of the graph.
+        is the number people are surprised by, and it is why the approximate index
+        is not free either, it stores its own copy of the graph.
         """
         if self._chunk_table_dimensions() is None:
             return {}
