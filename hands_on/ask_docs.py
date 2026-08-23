@@ -52,6 +52,7 @@ from rich.markdown import Markdown
 from rich.table import Table
 
 import rag
+from rag.pgstore import DEFAULT_DSN, PgVectorStore
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CORPUS_DIR = os.path.join(REPO_ROOT, "corpus")
@@ -112,8 +113,6 @@ def open_pg_index(dsn: str, chunk_size: int, overlap: int, rebuild: bool):
     in the database whether this process runs or not, so the only question at
     startup is what changed since last time, and `sync()` answers it in one pass.
     """
-    from rag.pgstore import PgVectorStore
-
     store = PgVectorStore.connect(dsn)
     if rebuild:
         store.drop_all()
@@ -142,8 +141,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--store", choices=["json", "pg"], default="json",
                    help="Where the index lives: the .rag_index.json cache (default) "
                         "or Postgres/pgvector (needs `docker compose up -d`).")
-    p.add_argument("--database-url", default=os.getenv("RAG_DATABASE_URL"),
-                   help="Postgres DSN for --store pg (default: the compose.yaml service).")
+    p.add_argument("--database-url", default=None,
+                   help="Postgres DSN for --store pg. Defaults to RAG_DATABASE_URL "
+                        "from the environment or .env, then to the compose.yaml service. "
+                        "(Read after load_dotenv(), not here: an argparse default is "
+                        "evaluated at parse time, before .env has been loaded.)")
     p.add_argument("--show-context", action="store_true",
                    help="Print the full text of each retrieved chunk.")
     return p.parse_args(argv)
@@ -160,7 +162,9 @@ def main(argv: list[str]) -> int:
     if args.store == "pg":
         from rag.pgstore import DEFAULT_DSN
 
-        dsn = args.database_url or DEFAULT_DSN
+        # os.getenv is read here, after load_dotenv() in main(), so a
+        # RAG_DATABASE_URL set in .env is actually honoured.
+        dsn = args.database_url or os.getenv("RAG_DATABASE_URL") or DEFAULT_DSN
         try:
             store, state = open_pg_index(dsn, args.chunk_size, args.overlap, args.rebuild)
         except RuntimeError as exc:
@@ -194,6 +198,8 @@ def main(argv: list[str]) -> int:
             console.print(f"\n[cyan][{n}] {rec.metadata['source']}[/cyan]")
             console.print(" ".join(rec.text.split()))
 
+    if isinstance(store, PgVectorStore):
+        store.close()
     return 0
 
 
