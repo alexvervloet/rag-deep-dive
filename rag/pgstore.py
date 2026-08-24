@@ -2,7 +2,7 @@
 rag/pgstore.py: the same vector store, in a real database.
 
 [rag/store.py](store.py) keeps chunks in a Python list and caches them to a JSON
-file. That is the right way to *learn* retrieval, and it quietly skips the part
+file. That is the right way to *learn* retrieval, and it skips the part
 of the job that actually takes the time in production: the **lifecycle** of an
 index that outlives the process.
 
@@ -236,7 +236,7 @@ class PgVectorStore:
 
         `vector(1536)` is a typed column like `varchar(20)`: the width is fixed
         at creation. This is the concrete reason an embedding-model change is a
-        migration. Nothing here can quietly adapt to a 1024-dimensional vector
+        migration. Nothing here can adapt to a 1024-dimensional vector
         once the column says 1536.
 
         It takes a cursor rather than opening its own, and it does not commit,
