@@ -15,7 +15,7 @@ Two classic, complementary techniques, both just an extra LLM call before retrie
     "answer space," much closer to the real passage than the question is.
 
   - Multi-query: ask the model for several paraphrases of the question, retrieve for
-    each, and union the results. More shots on goal, and robust to one bad phrasing.
+    each, and union the results. More shots on goal, and it survives one bad phrasing.
 
 This script compares direct retrieval vs. HyDE vs. multi-query on a deliberately
 oblique question, printing each chunk's `source > heading` so you can watch the
