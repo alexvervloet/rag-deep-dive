@@ -16,7 +16,7 @@ This is deliberately the hardest case for retrieval: several near-identical chun
 that differ only by an entity (the plan name) that the chunk text never mentions.
 Modern embeddings are strong enough that a chunk which merely *implies* its context
 usually still ranks; the place they genuinely fail is disambiguation like this,
-which is exactly where contextual retrieval earns its keep.
+which is exactly where contextual retrieval pays for itself.
 
 We use a tiny purpose-built corpus below (not corpus/, which is written too self-
 containedly to ever be under-specified). Each plan doc puts its bare "the cap is X"
