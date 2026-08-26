@@ -1,13 +1,14 @@
 """
 rag: a small, from-scratch retrieval-augmented-generation library.
 
-Everything here is built to be *read*, not just used. Six modules, each one
+Everything here is built to be *read*, not just used. Seven modules, each one a
 moving part of RAG:
 
   providers.py  the ONLY file that talks to an LLM provider (embed + generate)
   chunking.py   splitting documents into retrievable pieces
   store.py      an in-memory vector store (brute-force cosine search)
   pgstore.py    the same store in Postgres/pgvector: the durable-index lifecycle
+  ann.py        an approximate (IVF) index: trades recall for speed
   keyword.py    keyword search (BM25), the lexical counterpart to the store
   pipeline.py   tying it together: index -> retrieve -> answer
 
