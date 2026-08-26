@@ -14,8 +14,8 @@ by scoring the same corpus five ways on two deliberately opposite queries:
 
   1. a paraphrase query ("how do I get my notes out of the app?"), where the answer
      talks about "export," a word the query never uses. Vectors nail it; BM25 is
-     not just weak but actively misled, ranking a keyword-dense intro chunk above
-     the answer. Watch a 50/50 blend make things *worse* than vector-only.
+     worse than weak here: it is actively misled, ranking a keyword-dense intro
+     chunk above the answer. Watch a 50/50 blend make things *worse* than vector-only.
   2. an exact-term query ("what does error NN-413 mean?"), a rare token both
      halves agree on, so every fusion method safely ranks it first.
 
