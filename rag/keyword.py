@@ -10,9 +10,9 @@ that carry little semantic signal but must match *exactly*.
 The algorithm is **BM25**, the workhorse behind decades of search engines. It
 scores a chunk for a query by asking three questions about each query word:
 
-  1. Does the chunk contain it, and how often?      (term frequency)
+  1. Does the chunk contain it, and how often?       (term frequency)
   2. How rare is the word across the whole corpus?   (inverse document frequency)
-  3. Is the chunk short or long?                      (length normalization)
+  3. Is the chunk short or long?                     (length normalization)
 
 The intuition each one encodes:
 
