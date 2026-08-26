@@ -12,9 +12,9 @@ numbers in a vector are.
 
 Every test here exists because the behaviour it asserts was wrong once. They are
 mostly assertions that something is *absent* after a sync: no stale chunk, no
-half-written index, no dropped document. Retrieval bugs of this kind do
-not raise; they return a plausible answer citing a page that no longer exists,
-so the only way to catch them is to look for what should not be there.
+half-written index, no dropped document. Retrieval bugs of this kind do not
+raise; they return a plausible answer citing a page that no longer exists, so
+the only way to catch them is to look for what should not be there.
 """
 
 import os
