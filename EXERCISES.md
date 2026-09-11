@@ -1,6 +1,6 @@
 # Exercises: make the learning stick
 
-Reading code teaches you less than predicting what it will do and then checking.
+Reading code teaches you less than predicting what it'll do and then checking.
 This file turns each section of the [README](README.md) into a few quick
 active-recall prompts: a thing to predict, a thing to change, and a question to
 answer from memory.
@@ -179,7 +179,7 @@ happens to the hit rate, and what's the catch with just cranking k up?
 
 Hit rate usually rises with k (more chances to include the right chunk). But every
 extra chunk costs context-window space and tokens, dilutes the prompt with
-less-relevant text, and can *lower* answer quality. Bigger k is not free. It's a
+less-relevant text, and can *lower* answer quality. Bigger k isn't free. It's a
 tradeoff you measure, not maximize.
 </details>
 
@@ -303,10 +303,10 @@ embed?
 <details><summary>▸ Answer</summary>
 
 12, then 0, then 3. The first sync is a cold start. The second embeds nothing at
-all: each document's content hash matches what is stored, so there is no work to
+all: each document's content hash matches what's stored, so there's no work to
 do. The third re-embeds only the edited document's three chunks and leaves the
 other nine alone. That gap between "0" and "12" is the entire argument for a real
-store over a cache file, and it is a bill, not an abstraction: on a corpus of
+store over a cache file, and it's a bill, not an abstraction: on a corpus of
 50,000 pages where one page changed, the cache path pays to embed 50,000 pages.
 </details>
 
@@ -318,8 +318,8 @@ HNSW index exists, and the first plan says `Seq Scan`. Is that a bug?
 No, it's the planner being right. Reading the dozen rows in this corpus is
 cheaper than walking a graph, so Postgres declines the index; the example has to set
 `enable_seqscan = off` to make the index run at all. The lesson generalizes past
-Postgres: an index you built is not an index you are using, and an approximate
-index you are using has a recall number you have not measured yet. Check what the
+Postgres: an index you built isn't an index you're using, and an approximate
+index you're using has a recall number you haven't measured yet. Check what the
 database actually does rather than what you meant it to do.
 </details>
 
@@ -333,8 +333,8 @@ It has to re-embed everything, and it knows because the model id is stored in th
 index alongside the vectors. Two embedding models put their axes in different
 places, so cosine similarity between their vectors measures nothing; a stored
 vector is only meaningful next to vectors from the same model. Often the schema
-catches it first, since a `vector(1536)` column cannot physically hold a
-1024-dimensional vector, but do not rely on that: when two models happen to share
+catches it first, since a `vector(1536)` column can't physically hold a
+1024-dimensional vector, but don't rely on that: when two models happen to share
 a width, the widths match and the answers are nonsense that looks fine. Changing the
 embedding model is a migration with a re-embedding bill attached.
 </details>
