@@ -14,7 +14,7 @@ asks the next question. How do you get a model to answer accurately from your ow
 documents?
 
 Like its siblings, walk through it rather than reading it. Each section ends with
-something to run. Do the running. That is where the learning is. And
+something to run. Do the running. That's where the learning is. And
 [EXERCISES.md](EXERCISES.md) has a predict-then-run prompt for each section.
 
 ---
@@ -23,7 +23,7 @@ something to run. Do the running. That is where the learning is. And
 
 RAG sounds like a lot of machinery. It all hangs off a single sentence.
 
-> **A model can only answer from what is in its context window. RAG is the discipline
+> **A model can only answer from what's in its context window. RAG is the discipline
 > of putting the right text there.**
 
 That's it. Chunking cuts documents into pieces small enough to put there. Embeddings and
@@ -62,7 +62,7 @@ sibling repos with `PROVIDER` in `.env`.
 | `claude` | Voyage AI `voyage-3.5` | Claude `claude-haiku-4-5` | `ANTHROPIC_API_KEY` + `VOYAGE_API_KEY` |
 
 Every example and the capstone work the same way on either. The only file that knows
-which provider you picked is [rag/providers.py](rag/providers.py), and that is the whole
+which provider you picked is [rag/providers.py](rag/providers.py), and that's the whole
 point. RAG is an architecture rather than a provider feature.
 
 > **You can start before spending much.** Example 02, chunking, is fully offline with no
@@ -75,7 +75,7 @@ point. RAG is an architecture rather than a provider feature.
 
 RAG is built on one capability from the sibling repos. An **embedding** turns text into a
 vector that captures its meaning, and **cosine similarity** measures how close two
-vectors are, where 1.0 means the same meaning and 0 means unrelated. Here is what makes
+vectors are, where 1.0 means the same meaning and 0 means unrelated. Here's what makes
 retrieval possible: two texts can match strongly even when they share no words at all.
 
 ```bash
@@ -104,7 +104,7 @@ Two knobs, and both are tradeoffs.
 - **Overlap.** Chunks share a few words at the seams, so an idea split across a boundary
   isn't lost to both neighbours.
 
-There is no universally correct setting. It depends on your documents and your
+There's no universally correct setting. It depends on your documents and your
 questions, which is why Section 6 has you measure it. How you cut matters as much as how
 big. See [rag/chunking.py](rag/chunking.py) for `chunk_text()` (sliding window),
 `chunk_paragraphs()` (split on blank lines), and `chunk_markdown_sections()` (split on
@@ -116,7 +116,7 @@ headings), compared head to head in the "Chunking strategies" example under
 ## 4. The vector store, or finding the right chunks
 
 A vector store is a list of `(text, vector)` pairs plus a way to find the vectors closest
-to a query. We build one by hand so there is no mystery. Store each chunk with its
+to a query. We build one by hand so there's no mystery. Store each chunk with its
 embedding, then for a query, score every chunk by cosine similarity and return the
 top-k.
 
@@ -130,7 +130,7 @@ of chunks and completely transparent. Swapping in an approximate index like FAIS
 hosted vector database like pgvector or Pinecone, for millions of vectors is the main
 thing "production RAG" adds. Same idea, cleverer data structure. §12 does exactly that
 swap against a real Postgres, so you can see what changes, which is the lifecycle, and
-what does not, which is the retrieval.
+what doesn't, which is the retrieval.
 
 ---
 
@@ -171,7 +171,7 @@ secrun python examples/05_chunk_size.py
 ```
 
 Small chunks pinpoint the exact sentence and can fragment an answer. Large chunks carry
-more context per hit, less precisely. The lesson is not "small is good". It is that this
+more context per hit, less precisely. The lesson isn't "small is good". It's that this
 is an empirical knob you tune by looking at results, and in Section 10, at numbers.
 
 ---
@@ -179,11 +179,11 @@ is an empirical knob you tune by looking at results, and in Section 10, at numbe
 ## 7. Keyword search, the other half of retrieval
 
 The vector store in Section 4 matches on meaning. Its opposite number is **keyword**
-(lexical) search, which matches on the actual words. That is exactly what embeddings are
+(lexical) search, which matches on the actual words. That's exactly what embeddings are
 worst at: product names, error codes, IDs. We build it from scratch with **BM25**, the
 classic search-engine ranking function, which weighs each query word by how rare it is (a
 shared "the" is worthless, a shared "NN-413" is decisive) and normalizes for chunk
-length. No model, no embeddings, just arithmetic over word counts, so it is free and
+length. No model, no embeddings, just arithmetic over word counts, so it's free and
 offline.
 
 ```bash
@@ -245,7 +245,7 @@ secrun python examples/09_evaluation.py
 
 The example scores a tiny labelled set and prints all three numbers. Change a knob (chunk
 size, k, hybrid weighting, reranking) and rerun. If a number drops, you caught a
-regression you would otherwise have shipped. This is the habit that separates a RAG demo
+regression you'd otherwise have shipped. This is the habit that separates a RAG demo
 from a RAG system.
 
 ---
@@ -274,7 +274,7 @@ secrun python examples/11_contextual_retrieval.py
 ```
 
 ### Metadata filtering and parent-document retrieval
-Retrieval quality is not only embeddings. **Metadata filtering** constrains where you
+Retrieval quality isn't only embeddings. **Metadata filtering** constrains where you
 search, by category, date, or access level, which gives you relevance and security in one
 move. **Parent-document retrieval**, also called small-to-big, embeds small chunks for a
 precise match and returns the larger parent for complete context, which resolves the
@@ -285,7 +285,7 @@ secrun python examples/12_metadata_and_parent.py
 
 ### Chunking strategies, fixed-size against structure-aware
 A fixed-size word window cuts wherever the count runs out, sometimes mid-topic, gluing
-the tail of one section onto the head of the next. That is exactly the merged chunk that
+the tail of one section onto the head of the next. That's exactly the merged chunk that
 tripped up §8's hybrid search. Splitting on the document's own headings instead gives one
 topic per chunk and a heading you can cite. The honest limit is that it fixes structure
 and does nothing about the vocabulary gap that query transformation handles.
@@ -348,7 +348,7 @@ has clicked.
 
 ## 12. A real vector store: Postgres + pgvector
 
-Everything so far keeps the index in memory and caches it to `.rag_index.json`. That is
+Everything so far keeps the index in memory and caches it to `.rag_index.json`. That's
 the right shape for learning retrieval, and it hides the half of the job that takes the
 time in production. A cache file has exactly one verb, rebuild everything, and rebuilding
 everything means re-embedding everything, which is the one step that costs money.
@@ -359,7 +359,7 @@ index forces on you:
 
 | The lifecycle event | What the JSON cache does | What the database does |
 |---|---|---|
-| Nothing changed since last run | Rebuild everything, or trust a cache with no idea what is in the corpus | Compare a content hash per document; embed nothing |
+| Nothing changed since last run | Rebuild everything, or trust a cache with no idea what's in the corpus | Compare a content hash per document; embed nothing |
 | One document edited | Re-embed the whole corpus | Re-embed that document; replace its chunks in one transaction |
 | A document deleted from the corpus | Nothing, unless you remember to rebuild | Delete the row; `ON DELETE CASCADE` takes its vectors with it |
 | A document *emptied* upstream | Nothing, same as above | Replaced by nothing: its chunks go and its hash advances, so the next sync reads "unchanged" rather than re-reporting the edit forever |
@@ -389,27 +389,27 @@ secrun python hands_on/ask_docs.py --store pg --rebuild        # start the index
 Read [rag/pgstore.py](rag/pgstore.py) next to [rag/store.py](rag/store.py). The
 retrieval maths is unchanged. `<=>` is pgvector's cosine distance operator, so
 `1 - (embedding <=> query)` is the same cosine similarity `store.py` computes by hand,
-and `pipeline.py` cannot tell the two stores apart. The database is an operational
+and `pipeline.py` can't tell the two stores apart. The database is an operational
 upgrade rather than a different idea.
 
 Three things the example is deliberately honest about.
 
-- **The planner ignores your index, and it is right to.** This corpus is a
+- **The planner ignores your index, and it's right to.** This corpus is a
   dozen chunks, and Postgres chooses a sequential scan over the HNSW index,
   because reading a dozen rows beats walking a graph. The example prints both
   plans, forcing the index with `enable_seqscan = off` to show what it returns.
-  An index whose recall you have not measured at your own scale is a guess; the
+  An index whose recall you haven't measured at your own scale is a guess; the
   approximate-search example under
   [Going further](#going-further-six-more-retrieval-upgrades) is the same dial,
   turned by hand.
-- **An index is not free before it pays.** HNSW stores its own copy of every
+- **An index isn't free before it pays.** HNSW stores its own copy of every
   vector and slows every insert. Build it when brute force is measurably too
   slow, not in advance.
-- **A database is not automatically the right answer.** For a corpus of a few
+- **A database isn't automatically the right answer.** For a corpus of a few
   thousand chunks on one machine, `store.py` plus a cache file is genuinely
   better: no service to run, no migration to write, no schema to keep in step
   with your embedding model. What the database buys you is the lifecycle, so
-  reach for it when documents *change*, not when they are merely numerous.
+  reach for it when documents *change*, not when they're merely numerous.
 
 The lifecycle claims above are asserted rather than promised. With the service
 running:
@@ -420,12 +420,12 @@ RAG_TEST_DATABASE_URL=postgresql://rag:rag_local_only@localhost:54331/rag \
 ```
 
 Those tests make no API calls, because the embedder is a deterministic stand-in and the
-lifecycle does not care what the numbers are. Most of them assert that something is
+lifecycle doesn't care what the numbers are. Most of them assert that something is
 absent after a sync: no stale chunk, no half-written index, no document dropped without a
-word. That is the shape retrieval bugs take. They do not raise. They answer plausibly,
+word. That's the shape retrieval bugs take. They don't raise. They answer plausibly,
 citing a page that no longer exists.
 
-Stop the service when you are finished; the data survives in a named volume.
+Stop the service when you're finished; the data survives in a named volume.
 
 ```bash
 docker compose down
@@ -436,8 +436,8 @@ docker compose down
 ## RAG, fine-tuning, or something else?
 
 RAG is the right tool for one specific problem: the model lacks knowledge it needs right
-now. It is not the only tool, and reaching for it reflexively is a common mistake. The
-honest framing comes straight from this repo's one big idea. RAG changes what is in the
+now. It isn't the only tool, and reaching for it reflexively is a common mistake. The
+honest framing comes straight from this repo's one big idea. RAG changes what's in the
 context window. Fine-tuning changes how the model behaves by default. Different
 problems.
 
@@ -453,11 +453,11 @@ They complement each other rather than competing. A common production shape is f
 for format, RAG for facts. Train the model to always answer in your house style, and
 retrieve the facts it cites.
 
-Two rules of thumb. Don't fine-tune first. It is the slow, expensive, provider-specific
-option, and it cannot add knowledge that changes. Exhaust prompting, better context, and
+Two rules of thumb. Don't fine-tune first. It's the slow, expensive, provider-specific
+option, and it can't add knowledge that changes. Exhaust prompting, better context, and
 RAG before you reach for it. And don't decide by vibes. The only way to know whether
 fine-tuning beat your RAG baseline, or made things worse, is to measure both on the same
-gold set. That is what the [evals repo](https://github.com/alexvervloet/evals-deep-dive)
+gold set. That's what the [evals repo](https://github.com/alexvervloet/evals-deep-dive)
 is for, and the evaluation in Section 10 is the same method pointed at a different
 decision.
 
@@ -494,7 +494,7 @@ context window.
 ## From teaching code to production
 
 The "Where to go next" section above is about scaling RAG itself. This one is about the
-operational layer every RAG system needs once people rely on it. It is independent of
+operational layer every RAG system needs once people rely on it. It's independent of
 retrieval quality, and the same for any LLM app.
 
 | This repo's teaching shortcut | In production |
@@ -569,7 +569,7 @@ Run `secrun python check_setup.py` first; it catches most problems. Then, by sym
 | Switched provider and results went haywire | Stale index. The capstone auto-rebuilds, but if you cached elsewhere, delete `.rag_index.json`; vectors aren't comparable across embedding models. |
 | `Could not connect to Postgres at ...` | The optional §12 database isn't running. `docker compose up -d`, or drop `--store pg` to use the JSON cache. |
 | `The Postgres path needs psycopg` | `pip install -r requirements-postgres.txt`. Only the §12 path needs it. |
-| `this query vector has N dimensions and the index holds M` | You switched embedding models. `sync()` rebuilds the index when the model *id* changes; this error is the backstop for when it does not, such as OpenAI's `dimensions=` parameter narrowing `text-embedding-3-small` under the same name. Re-index (`--rebuild`) to clear it. |
+| `this query vector has N dimensions and the index holds M` | You switched embedding models. `sync()` rebuilds the index when the model *id* changes; this error is the backstop for when it doesn't, such as OpenAI's `dimensions=` parameter narrowing `text-embedding-3-small` under the same name. Re-index (`--rebuild`) to clear it. |
 | `SyntaxError` / odd type errors on startup | You're likely on Python 3.9 or older; this repo needs 3.10+. `check_setup.py` confirms your version. |
 
 Still stuck? Every file is small and self-contained. Open it, read the docstring
@@ -615,4 +615,4 @@ And the whole series lands in one codebase in the
 [capstone](https://github.com/alexvervloet/deep-dive-capstone): a codebase Q&A tool
 built step by step, one tag per dive.
 
-**You are here: #4, RAG.**
+**You're here: #4, RAG.**
