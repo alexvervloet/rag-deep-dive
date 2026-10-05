@@ -26,7 +26,7 @@ from typing import cast
 
 # Default models per stack. These mirror the ones the sibling repos use.
 _OPENAI_EMBED = "text-embedding-3-small"
-_OPENAI_CHAT = "gpt-5.4-nano"
+_OPENAI_CHAT = "gpt-6-luna"
 _VOYAGE_EMBED = "voyage-3.5"
 _CLAUDE_CHAT = "claude-haiku-4-5"
 
@@ -154,6 +154,10 @@ def generate(system: str, user: str, max_tokens: int = 512) -> str:
     if p == "openai":
         resp = _openai_client().chat.completions.create(
             model=_OPENAI_CHAT,
+            # gpt-6-luna reasons by default. Hidden reasoning tokens count against
+            # max_completion_tokens, so a small cap can come back empty. "none"
+            # turns it off: answering from retrieved context doesn't need it.
+            reasoning_effort="none",
             max_completion_tokens=max_tokens,
             messages=[
                 {"role": "system", "content": system},
