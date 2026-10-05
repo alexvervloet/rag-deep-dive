@@ -58,7 +58,7 @@ sibling repos with `PROVIDER` in `.env`.
 
 | `PROVIDER` | Embeddings | Chat | Keys needed |
 |------------|-----------|------|-------------|
-| `openai` (default) | OpenAI `text-embedding-3-small` | OpenAI `gpt-5.4-nano` | `OPENAI_API_KEY` |
+| `openai` (default) | OpenAI `text-embedding-3-small` | OpenAI `gpt-6-luna` | `OPENAI_API_KEY` |
 | `claude` | Voyage AI `voyage-3.5` | Claude `claude-haiku-4-5` | `ANTHROPIC_API_KEY` + `VOYAGE_API_KEY` |
 
 Every example and the capstone work the same way on either. The only file that knows
