@@ -7,9 +7,15 @@
 #
 # The image is pinned. pgvector versions change index defaults and operator
 # behaviour, and a lesson whose output moves under you is not a lesson.
+#
+# Bumping the tag doesn't upgrade a database that already exists. The volume
+# keeps the extension at the version it was created with (CREATE EXTENSION IF
+# NOT EXISTS never upgrades), so after a bump run, once:
+#   docker compose exec postgres psql -U rag -d rag -c "ALTER EXTENSION vector UPDATE"
+# or start clean with `docker compose down -v`.
 services:
   postgres:
-    image: pgvector/pgvector:0.8.6-pg18
+    image: pgvector/pgvector:0.8.7-pg18
     environment:
       POSTGRES_DB: rag
       POSTGRES_USER: rag
