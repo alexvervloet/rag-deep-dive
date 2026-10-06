@@ -570,7 +570,7 @@ Run `secrun python check_setup.py` first; it catches most problems. Then, by sym
 | `Could not connect to Postgres at ...` | The optional §12 database isn't running. `docker compose up -d`, or drop `--store pg` to use the JSON cache. |
 | `The Postgres path needs psycopg` | `pip install -r requirements-postgres.txt`. Only the §12 path needs it. |
 | `this query vector has N dimensions and the index holds M` | You switched embedding models. `sync()` rebuilds the index when the model *id* changes; this error is the backstop for when it doesn't, such as OpenAI's `dimensions=` parameter narrowing `text-embedding-3-small` under the same name. Re-index (`--rebuild`) to clear it. |
-| `SyntaxError` / odd type errors on startup | You're likely on Python 3.9 or older; this repo needs 3.10+. `check_setup.py` confirms your version. |
+| `SyntaxError` / odd type errors on startup | You're likely on Python 3.10 or older; this repo needs 3.11+. `check_setup.py` confirms your version. |
 
 Still stuck? Every file is small and self-contained. Open it, read the docstring
 at the top, and run it directly.
