@@ -324,7 +324,7 @@ database actually does rather than what you meant it to do.
 </details>
 
 **Recall.** The corpus hasn't changed at all, but you've switched from
-`text-embedding-3-small` to `voyage-3.5`. What does the store have to do, and how
+`text-embedding-3-small` to `voyage-4`. What does the store have to do, and how
 does it know?
 
 <details><summary>▸ Answer</summary>
