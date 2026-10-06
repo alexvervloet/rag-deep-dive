@@ -28,7 +28,7 @@ Examples
   docker compose up -d
   secrun python hands_on/ask_docs.py --store pg
 
-The index is cached in .rag_index.json. It records which provider and chunk
+The index is cached in .rag_index.json. It records which embedding model and chunk
 settings built it, and rebuilds automatically if those change; vectors from one
 embedding model are meaningless to another.
 
@@ -69,8 +69,13 @@ def build_or_load_index(chunk_size: int, overlap: int, rebuild: bool):
     exactly as a production system would. The cache header guards against using
     vectors built by a different embedding model.
     """
+    # Key on the embedding MODEL, not just the provider. Until 2026-10-06 this only
+    # recorded the provider, so when the claude stack moved from voyage-3.5 to
+    # voyage-4 the old cache still matched, and new query vectors would have been
+    # compared against old document vectors without any error.
     meta = {
         "provider": rag.provider_name(),
+        "embed_model": rag.embed_model(),
         "chunk_size": chunk_size,
         "overlap": overlap,
     }
