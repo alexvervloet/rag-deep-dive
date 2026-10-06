@@ -27,7 +27,10 @@ from typing import cast
 # Default models per stack. These mirror the ones the sibling repos use.
 _OPENAI_EMBED = "text-embedding-3-small"
 _OPENAI_CHAT = "gpt-6-luna"
-_VOYAGE_EMBED = "voyage-3.5"
+# voyage-4 since 2026-10-06 (was voyage-3.5, same price). Changing the embedding
+# model means re-embedding: pgstore.py records the model in the index and refuses
+# to mix vectors from two models.
+_VOYAGE_EMBED = "voyage-4"
 _CLAUDE_CHAT = "claude-haiku-4-5"
 
 _KEYS = {
